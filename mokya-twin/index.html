@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0A0A0A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MokyaTwin">
+  <meta name="description" content="MokyaLora Digital Twin — RP2350 firmware sandbox with MIE Zhuyin input">
+  <title>MokyaLora Digital Twin</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon"              type="image/svg+xml" href="icons/icon-192.svg">
+  <link rel="apple-touch-icon"                       href="icons/icon-192.svg">
+
+  <!-- Tailwind CSS (utility classes for outer UI chrome) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            gray: {
+              950: '#0A0A0A',
+              900: '#111113',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Device-specific CSS -->
+  <link rel="stylesheet" href="css/device.css">
+
+  <!-- Noto Sans TC for CJK rendering on canvas (optional, gracefully absent) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    /* Ensure Tailwind dark base */
+    body { background: #0A0A0A; }
+  </style>
+</head>
+
+<body class="min-h-screen flex flex-col items-center justify-start py-4 select-none overflow-x-hidden"
+      style="background:#0A0A0A">
+
+  <!-- ── Boot Splash ─────────────────────────────────────────── -->
+  <div id="splash">
+    <div class="splash-logo">MOKYALORA</div>
+    <div class="splash-sub">DIGITAL TWIN · PHASE 1</div>
+    <div class="splash-bar">
+      <div class="splash-progress" style="width:5%"></div>
+    </div>
+    <div id="splash-msg" style="font-size:10px;color:#48484A;margin-top:8px;letter-spacing:1px">
+      Booting…
+    </div>
+  </div>
+
+  <!-- ── USB Connection Bar ─────────────────────────────────── -->
+  <div id="connection-bar" class="w-full max-w-xs mb-2 px-2">
+    <div class="flex items-center gap-2 rounded-lg px-3 py-1.5 border"
+         style="background:#111113;border-color:#38383A">
+      <div id="conn-indicator" class="w-2 h-2 rounded-full bg-gray-600 flex-shrink-0"></div>
+      <span id="conn-status" class="text-xs flex-1 truncate" style="color:#8E8E93">
+        模擬模式 (Simulation)
+      </span>
+      <button id="btn-connect"
+              class="text-xs px-2 py-0.5 rounded transition-colors flex-shrink-0"
+              style="background:#0D3A1C;color:#30D158;border:1px solid #1A7A36">
+        連接 USB
+      </button>
+      <button id="btn-disconnect"
+              class="text-xs px-2 py-0.5 rounded transition-colors flex-shrink-0 hidden"
+              style="background:#3A1010;color:#FF453A;border:1px solid #5A2020">
+        中斷
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Device Frame ───────────────────────────────────────── -->
+  <div class="device-frame" id="device-frame">
+
+    <!-- Speaker grille dots (top) -->
+    <div class="device-speaker-top">
+      <div class="speaker-dot"></div>
+      <div class="speaker-dot"></div>
+      <div class="speaker-dot"></div>
+      <div class="speaker-dot"></div>
+      <div class="speaker-dot"></div>
+    </div>
+
+    <!-- Screen Bezel: 240×320 IPS display -->
+    <div class="screen-bezel">
+      <!--
+        Canvas is 240×320 — matches RP2350 ILI9341 hardware resolution exactly.
+        CSS width/height match, so each canvas pixel = 1 CSS pixel.
+        Use CSS transform scale() for high-DPI displays if needed.
+        Phase 4: LVGL WASM will write to this canvas via flush_cb.
+      -->
+      <canvas id="screen-canvas" width="240" height="320"
+              aria-label="MokyaLora device screen">
+      </canvas>
+    </div>
+
+    <!-- 36-key 6×6 Keyboard Matrix (built dynamically by app.js) -->
+    <div class="keyboard-section">
+      <div class="key-grid" id="key-grid">
+        <!-- Populated by buildKeyGrid() in app.js -->
+        <!-- Layout: KEY_R0..R5 × KEY_C0..C5 = 36 keys -->
+        <!-- Matches RP2350 GPIO matrix: KEY_C0–C5 driven, KEY_R0–R5 read -->
+      </div>
+    </div>
+
+    <!-- USB-C port at bottom -->
+    <div class="device-bottom">
+      <div class="device-port" title="USB-C (Web Serial)">
+        <div class="usb-c-port"></div>
+      </div>
+    </div>
+
+  </div>
+  <!-- /.device-frame -->
+
+  <!-- ── Debug Panel ────────────────────────────────────────── -->
+  <div id="debug-panel" class="hidden w-full max-w-xs mt-2 px-2">
+    <div class="rounded-lg p-3 border" style="background:#111113;border-color:#38383A">
+      <div class="flex justify-between items-center mb-1">
+        <span class="text-xs font-mono" style="color:#30D158">MIE / HAL Debug</span>
+        <button id="btn-clear-debug" class="text-xs" style="color:#48484A">clear</button>
+      </div>
+      <div id="debug-log" class="h-28 overflow-y-auto font-mono" style="font-size:9px"></div>
+    </div>
+  </div>
+
+  <button id="btn-toggle-debug"
+          class="mt-2 font-mono transition-colors"
+          style="font-size:10px;color:#3A3A3C">
+    [debug console]
+  </button>
+
+  <!-- ── Phase indicator ────────────────────────────────────── -->
+  <div class="mt-2 font-mono" style="font-size:9px;color:#2A2A2C">
+    MokyaLora Digital Twin · Phase 1 · Foundation ·
+    <a href="https://github.com/tengigabytes/MokyaLora"
+       target="_blank" rel="noopener"
+       style="color:#1A5A30;text-decoration:none">
+      tengigabytes/MokyaLora
+    </a>
+  </div>
+
+  <!-- ── Architecture legend (collapsed, dev reference) ──────── -->
+  <details class="mt-3 w-full max-w-xs px-2" style="font-size:9px;color:#3A3A3C">
+    <summary class="cursor-pointer font-mono" style="color:#2A4A35">Architecture</summary>
+    <pre style="color:#3A3A3C;margin-top:4px;line-height:1.5">
+KeyboardHAL (6×6 Matrix Scan)
+  └─► MIE_Bridge ──────────────────────── WASM Phase 4
+        ├─ MIE_Processor (State Machine)
+        │    ├─ MIE_Timer (RP2350 alarms)
+        │    └─ MIE_Trie  (Phonetic Trie)
+        └─ MeshtasticSerial (Web Serial)
+DisplayHAL (ILI9341 flush_cb) ◄────────── LVGL WASM Phase 4
+  └─► MokyaRenderer (LVGL-style widgets)
+        └─► ScreenManager (lv_scr_load_anim)
+              ├─ ChatScreen
+              ├─ MapScreen
+              └─ SettingsScreen
+    </pre>
+  </details>
+
+  <!-- ── ES Module entry point ──────────────────────────────── -->
+  <script type="module" src="js/app.js"></script>
+
+  <!-- ── Service Worker registration ───────────────────────── -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
+          .then(reg => console.log('[SW] Registered, scope:', reg.scope))
+          .catch(err => console.warn('[SW] Registration failed:', err));
+      });
+    }
+  </script>
+
+</body>
+</html>
