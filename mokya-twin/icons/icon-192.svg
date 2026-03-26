@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="40" fill="#0A0A0A"/>
+  <!-- Device outline -->
+  <rect x="56" y="20" width="80" height="132" rx="12" fill="#1C1C1E" stroke="#30D158" stroke-width="2"/>
+  <!-- Screen -->
+  <rect x="62" y="32" width="68" height="92" rx="4" fill="#0A0A0A"/>
+  <!-- LoRa signal lines on screen -->
+  <path d="M80 65 Q96 50 112 65" stroke="#30D158" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+  <path d="M72 72 Q96 52 120 72" stroke="#30D158" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <path d="M64 79 Q96 54 128 79" stroke="#30D158" stroke-width="1.5" fill="none" stroke-linecap="round" opacity="0.3"/>
+  <!-- Center dot -->
+  <circle cx="96" cy="90" r="4" fill="#30D158"/>
+  <!-- Keyboard dots -->
+  <g fill="#38383A">
+    <rect x="64" y="134" width="8" height="6" rx="1.5"/>
+    <rect x="74" y="134" width="8" height="6" rx="1.5"/>
+    <rect x="84" y="134" width="8" height="6" rx="1.5"/>
+    <rect x="94" y="134" width="8" height="6" rx="1.5"/>
+    <rect x="104" y="134" width="8" height="6" rx="1.5"/>
+    <rect x="114" y="134" width="8" height="6" rx="1.5"/>
+  </g>
+  <!-- "MK" text -->
+  <text x="96" y="175" font-family="system-ui,sans-serif" font-size="18" font-weight="700" fill="#30D158" text-anchor="middle" letter-spacing="2">MK</text>
+</svg>

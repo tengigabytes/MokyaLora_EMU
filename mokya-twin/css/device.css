@@ -1,0 +1,471 @@
+/* ================================================================
+   MokyaLora Digital Twin — Device Frame & UI CSS
+   Simulates RP2350 + 2.4" IPS 240×320 physical device
+   Color scheme: Meshtastic green-tech / cyberpunk retro-phone
+   ================================================================ */
+
+:root {
+  /* Meshtastic green-tech palette */
+  --mk-green:        #30D158;
+  --mk-green-dim:    #1A7A36;
+  --mk-green-muted:  #0D3A1C;
+  --mk-green-glow:   rgba(48, 209, 88, 0.15);
+  --mk-bg:           #0A0A0A;
+  --mk-surface:      #1C1C1E;
+  --mk-surface2:     #2C2C2E;
+  --mk-surface3:     #3A3A3C;
+  --mk-border:       #38383A;
+  --mk-text:         #EBEBF5;
+  --mk-text-dim:     #8E8E93;
+  --mk-text-muted:   #48484A;
+  --mk-accent:       #00FF88;
+  --mk-danger:       #FF453A;
+  --mk-warning:      #FFD60A;
+  --mk-info:         #64D2FF;
+  --mk-lora:         #BF5AF2;
+  /* Device physical dimensions */
+  --dev-w:           268px;
+  --dev-radius:      28px;
+  --screen-w:        240px;
+  --screen-h:        320px;
+}
+
+/* ── Reset ──────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  background: var(--mk-bg);
+  color: var(--mk-text);
+  font-family: system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Outer Device Body ─────────────────────────────────────── */
+.device-frame {
+  width: var(--dev-w);
+  flex-shrink: 0;
+  background: linear-gradient(155deg, #2D2D2F 0%, #1C1C1E 45%, #242426 100%);
+  border-radius: var(--dev-radius);
+  border: 1px solid #3A3A3C;
+  box-shadow:
+    0 0 0 1px #111,
+    0 2px 6px rgba(0,0,0,0.95),
+    0 12px 32px rgba(0,0,0,0.75),
+    0 40px 100px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    inset 0 -1px 0 rgba(0,0,0,0.6),
+    /* subtle green glow when active */
+    0 0 40px rgba(48,209,88,0.04);
+  padding: 14px 12px 20px;
+  position: relative;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Right side volume button simulation */
+.device-frame::before {
+  content: '';
+  position: absolute;
+  right: -3px;
+  top: 76px;
+  width: 3px;
+  height: 44px;
+  background: linear-gradient(to right, #2A2A2A, #383838, #2A2A2A);
+  border-radius: 0 3px 3px 0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+/* Left side power-LED simulation */
+.device-frame::after {
+  content: '';
+  position: absolute;
+  left: -2px;
+  top: 40px;
+  width: 3px;
+  height: 6px;
+  background: var(--mk-green);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 6px var(--mk-green), 0 0 12px rgba(48,209,88,0.5);
+  animation: led-pulse 3s ease-in-out infinite;
+}
+
+@keyframes led-pulse {
+  0%, 100% { opacity: 0.8; }
+  50%       { opacity: 0.3; }
+}
+
+/* ── Speaker Grille (top) ──────────────────────────────────── */
+.device-speaker-top {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  height: 8px;
+  margin-bottom: 10px;
+}
+
+.speaker-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #111;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.9), 0 1px 0 #3A3A3A;
+}
+
+/* ── Screen Bezel ──────────────────────────────────────────── */
+.screen-bezel {
+  background: #040404;
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 14px;
+  box-shadow:
+    0 0 0 1px #000,
+    inset 0 2px 10px rgba(0,0,0,0.98),
+    inset 0 0 4px rgba(0,0,0,0.9);
+  position: relative;
+  /* Green ambient glow from screen */
+  filter: drop-shadow(0 0 8px rgba(48,209,88,0.08));
+}
+
+/* Scanline overlay — subtle CRT authenticity */
+.screen-bezel::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 6px;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 1px,
+    rgba(0,0,0,0.04) 1px,
+    rgba(0,0,0,0.04) 2px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Reflection glare on bezel */
+.screen-bezel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  background: linear-gradient(
+    135deg,
+    rgba(255,255,255,0.03) 0%,
+    transparent 50%
+  );
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* The actual canvas — 240×320 real hardware pixels */
+#screen-canvas {
+  display: block;
+  width: var(--screen-w);
+  height: var(--screen-h);
+  border-radius: 6px;
+  /* Keep pixels sharp — simulates hardware pixel grid */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Keyboard Section ──────────────────────────────────────── */
+.keyboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* 6 × 6 matrix = 36 keys */
+.key-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 3px;
+}
+
+/* ── Key Buttons ───────────────────────────────────────────── */
+.key-btn {
+  height: 33px;
+  min-width: 0;
+  border-radius: 5px;
+  border: 1px solid #2C2C2E;
+  background: linear-gradient(180deg, #2A2A2C 0%, #1E1E20 100%);
+  color: #A0A0A8;
+  font-size: 7.5px;
+  line-height: 1.1;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 2px 1px;
+  position: relative;
+  transition: background 0.07s ease, box-shadow 0.07s ease, transform 0.05s ease, color 0.07s ease;
+  box-shadow:
+    0 2px 0 #0F0F0F,
+    inset 0 1px 0 rgba(255,255,255,0.035);
+  overflow: hidden;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.key-btn:hover {
+  background: linear-gradient(180deg, #323234 0%, #282828 100%);
+  border-color: #3A3A3C;
+  color: #C0C0C8;
+}
+
+/* Press state — simulates physical key travel */
+.key-btn:active,
+.key-btn.pressed {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 #0F0F0F;
+  background: linear-gradient(180deg, #0E2E1C 0%, #091A10 100%);
+  border-color: var(--mk-green);
+  color: var(--mk-green);
+}
+
+/* Key label elements */
+.key-primary {
+  font-size: 9px;
+  font-weight: 600;
+  color: inherit;
+  text-align: center;
+  letter-spacing: 0.02em;
+  /* Zhuyin chars need CJK-friendly font */
+  font-family: 'Noto Sans TC', 'PingFang TC', '微軟正黑體', system-ui, sans-serif;
+  white-space: nowrap;
+}
+
+.key-secondary {
+  font-size: 6px;
+  color: #555558;
+  text-align: center;
+  letter-spacing: 0.03em;
+  font-family: system-ui, sans-serif;
+}
+
+.key-btn.pressed .key-secondary { color: var(--mk-green-dim); }
+
+/* Ripple effect on press */
+.key-btn::after {
+  content: '';
+  position: absolute;
+  inset: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(48, 209, 88, 0.3);
+  pointer-events: none;
+  transition: none;
+}
+
+.key-btn.ripple::after {
+  inset: auto;
+  width: 48px;
+  height: 48px;
+  transform: translate(-50%, -50%);
+  left: 50%;
+  top: 50%;
+  animation: key-ripple 0.35s ease-out forwards;
+}
+
+@keyframes key-ripple {
+  from { transform: translate(-50%, -50%) scale(0); opacity: 0.6; }
+  to   { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+}
+
+/* ── Key Variant Styles by Row / Function ───────────────────── */
+
+/* Row 0 — Function row: dark green tint */
+.key-btn[data-row="0"] {
+  background: linear-gradient(180deg, #182420 0%, #101810 100%);
+  border-color: #1E3020;
+  color: #3EBF5A;
+}
+.key-btn[data-row="0"]:active,
+.key-btn[data-row="0"].pressed {
+  background: linear-gradient(180deg, #0C3018 0%, #081E0E 100%);
+  border-color: var(--mk-green);
+  color: #67EA94;
+}
+
+/* D-pad keys — blue/indigo tint */
+.key-btn[data-fn="UP"],
+.key-btn[data-fn="DOWN"],
+.key-btn[data-fn="LEFT"],
+.key-btn[data-fn="RIGHT"],
+.key-btn[data-fn="OK"] {
+  background: linear-gradient(180deg, #1C1C30 0%, #141420 100%);
+  border-color: #2A2A48;
+  color: #6878D8;
+  font-size: 11px;
+}
+.key-btn[data-fn="UP"]:active, .key-btn[data-fn="UP"].pressed,
+.key-btn[data-fn="DOWN"]:active, .key-btn[data-fn="DOWN"].pressed,
+.key-btn[data-fn="LEFT"]:active, .key-btn[data-fn="LEFT"].pressed,
+.key-btn[data-fn="RIGHT"]:active, .key-btn[data-fn="RIGHT"].pressed {
+  background: linear-gradient(180deg, #20204A 0%, #141430 100%);
+  border-color: #5868FF;
+  color: #8898FF;
+}
+.key-btn[data-fn="OK"]:active, .key-btn[data-fn="OK"].pressed {
+  background: linear-gradient(180deg, #1A3828 0%, #0E2418 100%);
+  border-color: var(--mk-green);
+  color: var(--mk-green);
+}
+
+/* DELETE key — red tint */
+.key-btn[data-fn="DEL"] {
+  background: linear-gradient(180deg, #2A1818 0%, #1E1010 100%);
+  border-color: #3C2020;
+  color: #E05050;
+}
+.key-btn[data-fn="DEL"]:active, .key-btn[data-fn="DEL"].pressed {
+  background: linear-gradient(180deg, #401010 0%, #280808 100%);
+  border-color: #FF453A;
+  color: #FF8080;
+}
+
+/* ENTER key — green accent */
+.key-btn[data-fn="ENTER"] {
+  color: #50C070;
+  background: linear-gradient(180deg, #182818 0%, #101A10 100%);
+  border-color: #203020;
+}
+
+/* SPACE key */
+.key-btn[data-fn="SPACE"] {
+  color: #808088;
+  letter-spacing: 0.3em;
+  font-size: 10px;
+}
+
+/* Tone keys — purple tint */
+.key-btn[data-fn^="TONE"] {
+  background: linear-gradient(180deg, #22182E 0%, #181020 100%);
+  border-color: #342040;
+  color: #B06AE0;
+}
+.key-btn[data-fn^="TONE"]:active, .key-btn[data-fn^="TONE"].pressed {
+  background: linear-gradient(180deg, #3A1A50 0%, #260E38 100%);
+  border-color: #BF5AF2;
+  color: #D08AFF;
+}
+
+/* MODE / LANG keys */
+.key-btn[data-fn="MODE"],
+.key-btn[data-fn="ENLANG"] {
+  background: linear-gradient(180deg, #28201A 0%, #1C1610 100%);
+  border-color: #3C2C20;
+  color: #D08040;
+}
+
+/* ── Device Bottom USB Port ────────────────────────────────── */
+.device-bottom {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.device-port {
+  width: 44px;
+  height: 8px;
+  background: #080808;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.95);
+}
+
+.usb-c-port {
+  width: 18px;
+  height: 4px;
+  background: #161616;
+  border-radius: 2px;
+  border: 1px solid #242424;
+}
+
+/* ── Connection Status Bar ─────────────────────────────────── */
+#connection-bar .conn-dot-sim   { background: #48484A; }
+#connection-bar .conn-dot-conn  { background: var(--mk-green); animation: led-pulse 2s infinite; }
+#connection-bar .conn-dot-err   { background: var(--mk-danger); }
+
+/* ── Debug Panel ───────────────────────────────────────────── */
+#debug-log {
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
+}
+#debug-log::-webkit-scrollbar       { width: 3px; }
+#debug-log::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+
+.dbg { padding: 1px 0; border-bottom: 1px solid #111; font-size: 10px; }
+.dbg-key    { color: #50C870; }
+.dbg-mie    { color: #8090FF; }
+.dbg-serial { color: #FFD060; }
+.dbg-err    { color: #FF7060; }
+.dbg-info   { color: #60C0D0; }
+
+/* ── Responsive Scaling ────────────────────────────────────── */
+@media (max-height: 920px) {
+  .device-frame { transform: scale(0.94); transform-origin: top center; }
+}
+@media (max-height: 820px) {
+  .device-frame { transform: scale(0.84); transform-origin: top center; }
+}
+@media (max-height: 720px) {
+  .device-frame { transform: scale(0.74); transform-origin: top center; }
+}
+@media (max-width: 340px) {
+  .device-frame { transform: scale(0.88); transform-origin: top center; }
+}
+
+/* ── Loading Splash ────────────────────────────────────────── */
+#splash {
+  position: fixed;
+  inset: 0;
+  background: #0A0A0A;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  gap: 16px;
+  transition: opacity 0.5s ease;
+}
+#splash.fade-out { opacity: 0; pointer-events: none; }
+
+.splash-logo {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--mk-green);
+  letter-spacing: 3px;
+}
+
+.splash-sub {
+  font-size: 11px;
+  color: #48484A;
+  letter-spacing: 2px;
+}
+
+.splash-bar {
+  width: 160px;
+  height: 2px;
+  background: #1C1C1E;
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.splash-progress {
+  height: 100%;
+  background: var(--mk-green);
+  border-radius: 1px;
+  width: 0%;
+  transition: width 0.4s ease;
+  box-shadow: 0 0 8px var(--mk-green);
+}
