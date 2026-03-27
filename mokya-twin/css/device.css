@@ -1,7 +1,7 @@
 /* ================================================================
    MokyaLora Digital Twin — Device Frame & UI CSS
-   Simulates RP2350 + 2.4" IPS 240×320 physical device
-   Color scheme: Meshtastic green-tech / cyberpunk retro-phone
+   Rev A PCB aesthetic: FR4 green soldermask + ILI9341 landscape
+   320×240 landscape display · 6×6 GPIO keyboard matrix
    ================================================================ */
 
 :root {
@@ -10,7 +10,7 @@
   --mk-green-dim:    #1A7A36;
   --mk-green-muted:  #0D3A1C;
   --mk-green-glow:   rgba(48, 209, 88, 0.15);
-  --mk-bg:           #0A0A0A;
+  --mk-bg:           #050A05;
   --mk-surface:      #1C1C1E;
   --mk-surface2:     #2C2C2E;
   --mk-surface3:     #3A3A3C;
@@ -23,11 +23,19 @@
   --mk-warning:      #FFD60A;
   --mk-info:         #64D2FF;
   --mk-lora:         #BF5AF2;
-  /* Device physical dimensions */
-  --dev-w:           268px;
-  --dev-radius:      28px;
-  --screen-w:        240px;
-  --screen-h:        320px;
+  /* PCB-specific */
+  --pcb-bg:          #0A1C0A;
+  --pcb-bg2:         #0E2410;
+  --pcb-border:      #1A4A1A;
+  --pcb-trace:       #1E3A1E;
+  --pcb-key-bg:      #0E2010;
+  --pcb-key-border:  #1E3A1E;
+  --pcb-screen-rim:  #C8A020;
+  --pcb-screen-glow: rgba(200,160,32,0.22);
+  /* Device dimensions (landscape) */
+  --dev-w:           354px;
+  --screen-w:        320px;
+  --screen-h:        240px;
 }
 
 /* ── Reset ──────────────────────────────────────────────────── */
@@ -40,160 +48,193 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ── Outer Device Body ─────────────────────────────────────── */
+/* ── Scaler wrapper ─────────────────────────────────────────── */
+.device-frame-scaler {
+  display: flex;
+  justify-content: center;
+  transform-origin: top center;
+  width: 100%;
+}
+
+/* ── Outer Device Body — PCB FR4 green soldermask ───────────── */
 .device-frame {
   width: var(--dev-w);
   flex-shrink: 0;
-  background: linear-gradient(155deg, #2D2D2F 0%, #1C1C1E 45%, #242426 100%);
-  border-radius: var(--dev-radius);
-  border: 1px solid #3A3A3C;
+  /* FR4 soldermask: dark PCB green with subtle copper-trace texture */
+  background:
+    repeating-linear-gradient(
+      -50deg,
+      transparent 0px, transparent 10px,
+      rgba(20,60,20,0.08) 10px, rgba(20,60,20,0.08) 11px
+    ),
+    repeating-linear-gradient(
+      40deg,
+      transparent 0px, transparent 14px,
+      rgba(10,40,10,0.06) 14px, rgba(10,40,10,0.06) 15px
+    ),
+    linear-gradient(165deg, #0E2410 0%, #0A1C0A 35%, #0C2010 65%, #091808 100%);
+  border-radius: 20px;
+  border: 1.5px solid var(--pcb-border);
   box-shadow:
-    0 0 0 1px #111,
-    0 2px 6px rgba(0,0,0,0.95),
-    0 12px 32px rgba(0,0,0,0.75),
-    0 40px 100px rgba(0,0,0,0.55),
-    inset 0 1px 0 rgba(255,255,255,0.06),
-    inset 0 -1px 0 rgba(0,0,0,0.6),
-    /* subtle green glow when active */
-    0 0 40px rgba(48,209,88,0.04);
-  padding: 14px 12px 20px;
+    0 0 0 1px #040804,
+    0 4px 12px rgba(0,0,0,0.98),
+    0 16px 48px rgba(0,0,0,0.88),
+    0 40px 100px rgba(0,0,0,0.65),
+    inset 0 1px 0 rgba(48,209,88,0.05),
+    inset 0 -1px 0 rgba(0,0,0,0.8),
+    /* PCB ambient glow */
+    0 0 80px rgba(10,50,10,0.25);
+  padding: 10px 10px 14px;
   position: relative;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Right side volume button simulation */
+/* Left-side antenna stub (SMA connector simulation) */
 .device-frame::before {
   content: '';
   position: absolute;
-  right: -3px;
-  top: 76px;
-  width: 3px;
-  height: 44px;
-  background: linear-gradient(to right, #2A2A2A, #383838, #2A2A2A);
-  border-radius: 0 3px 3px 0;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
-}
-
-/* Left side power-LED simulation */
-.device-frame::after {
-  content: '';
-  position: absolute;
-  left: -2px;
-  top: 40px;
-  width: 3px;
-  height: 6px;
-  background: var(--mk-green);
-  border-radius: 0 2px 2px 0;
-  box-shadow: 0 0 6px var(--mk-green), 0 0 12px rgba(48,209,88,0.5);
-  animation: led-pulse 3s ease-in-out infinite;
-}
-
-@keyframes led-pulse {
-  0%, 100% { opacity: 0.8; }
-  50%       { opacity: 0.3; }
-}
-
-/* ── Speaker Grille (top) ──────────────────────────────────── */
-.device-speaker-top {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 4px;
-  height: 8px;
-  margin-bottom: 10px;
-}
-
-.speaker-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #111;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.9), 0 1px 0 #3A3A3A;
-}
-
-/* ── Screen Bezel ──────────────────────────────────────────── */
-.screen-bezel {
-  background: #040404;
-  border-radius: 10px;
-  padding: 3px;
-  margin-bottom: 14px;
+  left: -12px;
+  top: 14px;
+  width: 12px;
+  height: 72px;
+  background: linear-gradient(to right, #081408, #1A3A1A, #0E2410);
+  border-radius: 6px 0 0 6px;
+  border: 1.5px solid var(--pcb-border);
+  border-right: none;
   box-shadow:
-    0 0 0 1px #000,
-    inset 0 2px 10px rgba(0,0,0,0.98),
-    inset 0 0 4px rgba(0,0,0,0.9);
-  position: relative;
-  /* Green ambient glow from screen */
-  filter: drop-shadow(0 0 8px rgba(48,209,88,0.08));
+    -3px 0 10px rgba(0,0,0,0.7),
+    inset -1px 0 4px rgba(0,0,0,0.5);
 }
 
-/* Scanline overlay — subtle CRT authenticity */
+/* ── PCB silkscreen label ────────────────────────────────────── */
+.pcb-label {
+  font-size: 7px;
+  color: #2A5A2A;
+  letter-spacing: 0.8px;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 6px;
+  opacity: 0.8;
+}
+
+/* ── Screen Bezel — PCB silkscreen yellow border ─────────────── */
+.screen-bezel {
+  background: #000;
+  border-radius: 5px;
+  padding: 2px;
+  margin-bottom: 8px;
+  border: 2.5px solid var(--pcb-screen-rim);
+  box-shadow:
+    0 0 14px var(--pcb-screen-glow),
+    0 0 28px rgba(200,160,32,0.06),
+    inset 0 2px 8px rgba(0,0,0,0.98);
+  position: relative;
+}
+
+/* Scanline overlay — subtle CRT/TFT authenticity */
 .screen-bezel::before {
   content: '';
   position: absolute;
-  inset: 3px;
-  border-radius: 6px;
+  inset: 2px;
+  border-radius: 3px;
   background: repeating-linear-gradient(
     0deg,
     transparent 0px,
     transparent 1px,
-    rgba(0,0,0,0.04) 1px,
-    rgba(0,0,0,0.04) 2px
+    rgba(0,0,0,0.025) 1px,
+    rgba(0,0,0,0.025) 2px
   );
   pointer-events: none;
   z-index: 2;
 }
 
-/* Reflection glare on bezel */
+/* Glare reflection */
 .screen-bezel::after {
   content: '';
   position: absolute;
   inset: 0;
-  border-radius: 10px;
+  border-radius: 5px;
   background: linear-gradient(
     135deg,
-    rgba(255,255,255,0.03) 0%,
-    transparent 50%
+    rgba(255,255,255,0.02) 0%,
+    transparent 45%
   );
   pointer-events: none;
   z-index: 3;
 }
 
-/* The actual canvas — 240×320 real hardware pixels */
+/* Canvas — 320×240 landscape (matches ILI9341 hardware) */
 #screen-canvas {
   display: block;
   width: var(--screen-w);
   height: var(--screen-h);
-  border-radius: 6px;
-  /* Keep pixels sharp — simulates hardware pixel grid */
+  border-radius: 3px;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   position: relative;
   z-index: 1;
 }
 
-/* ── Keyboard Section ──────────────────────────────────────── */
+/* ── Keyboard Section ─────────────────────────────────────────── */
 .keyboard-section {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
 }
 
-/* 6 × 6 matrix = 36 keys */
-.key-grid {
+/* ── Navigation Area — D-pad cross layout ────────────────────── */
+/*
+  Visual layout (4 col × 3 row):
+    [FUNC] [UP  ] [SET ] [VOL+]
+    [LEFT] [OK  ] [► ] [ -- ]
+    [BACK] [DOWN] [DEL] [VOL-]
+*/
+.kbd-nav-area {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(3, 30px);
+  grid-template-areas:
+    "nfunc  nup    nset   nvolup"
+    "nleft  nok    nright ."
+    "nback  ndown  ndel   nvoldn";
   gap: 3px;
 }
 
-/* ── Key Buttons ───────────────────────────────────────────── */
+/* Grid area placements for nav keys */
+.kbd-nav-area .key-btn[data-fn="FUNC"]  { grid-area: nfunc; }
+.kbd-nav-area .key-btn[data-fn="UP"]    { grid-area: nup; }
+.kbd-nav-area .key-btn[data-fn="SET"]   { grid-area: nset; }
+.kbd-nav-area .key-btn[data-fn="VOLUP"] { grid-area: nvolup; }
+.kbd-nav-area .key-btn[data-fn="LEFT"]  { grid-area: nleft; }
+.kbd-nav-area .key-btn[data-fn="OK"]    { grid-area: nok; }
+.kbd-nav-area .key-btn[data-fn="RIGHT"] { grid-area: nright; }
+.kbd-nav-area .key-btn[data-fn="BACK"]  { grid-area: nback; }
+.kbd-nav-area .key-btn[data-fn="DOWN"]  { grid-area: ndown; }
+.kbd-nav-area .key-btn[data-fn="DEL"]   { grid-area: ndel; }
+.kbd-nav-area .key-btn[data-fn="VOLDN"] { grid-area: nvoldn; }
+
+/* Nav keys are slightly shorter */
+.kbd-nav-area .key-btn {
+  height: 30px;
+}
+
+/* ── Core Input Area — 5×5 + function row ────────────────────── */
+.kbd-core-area {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+}
+
+/* ── Key Buttons ─────────────────────────────────────────────── */
 .key-btn {
-  height: 33px;
+  height: 38px;
   min-width: 0;
   border-radius: 5px;
-  border: 1px solid #2C2C2E;
-  background: linear-gradient(180deg, #2A2A2C 0%, #1E1E20 100%);
-  color: #A0A0A8;
+  border: 1px solid var(--pcb-key-border);
+  background: linear-gradient(180deg, #142814 0%, #0C1C0C 100%);
+  color: #4A7A4A;
   font-size: 7.5px;
   line-height: 1.1;
   cursor: pointer;
@@ -206,49 +247,65 @@ body {
   position: relative;
   transition: background 0.07s ease, box-shadow 0.07s ease, transform 0.05s ease, color 0.07s ease;
   box-shadow:
-    0 2px 0 #0F0F0F,
-    inset 0 1px 0 rgba(255,255,255,0.035);
+    0 2px 0 #040804,
+    inset 0 1px 0 rgba(48,209,88,0.04);
   overflow: hidden;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
 .key-btn:hover {
-  background: linear-gradient(180deg, #323234 0%, #282828 100%);
-  border-color: #3A3A3C;
-  color: #C0C0C8;
+  background: linear-gradient(180deg, #1C3A1C 0%, #142814 100%);
+  border-color: #2A5A2A;
+  color: #60A060;
 }
 
-/* Press state — simulates physical key travel */
+/* Press state — simulates physical key travel + PCB green glow */
 .key-btn:active,
 .key-btn.pressed {
   transform: translateY(1px);
-  box-shadow: 0 1px 0 #0F0F0F;
+  box-shadow: 0 1px 0 #040804;
   background: linear-gradient(180deg, #0E2E1C 0%, #091A10 100%);
   border-color: var(--mk-green);
   color: var(--mk-green);
 }
 
-/* Key label elements */
+/* ── Key Label Elements ───────────────────────────────────────── */
+
+/* Top line: QWERTY/numeric letters (dim monospace) */
+.key-qwerty {
+  font-size: 5.5px;
+  color: #3A5A3A;
+  text-align: center;
+  letter-spacing: 0.1em;
+  font-family: 'Courier New', monospace;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+/* Main label: Zhuyin phonemes or function name */
 .key-primary {
   font-size: 9px;
   font-weight: 600;
   color: inherit;
   text-align: center;
   letter-spacing: 0.02em;
-  /* Zhuyin chars need CJK-friendly font */
   font-family: 'Noto Sans TC', 'PingFang TC', '微軟正黑體', system-ui, sans-serif;
   white-space: nowrap;
+  line-height: 1.1;
 }
 
+/* Third char (multi-char Zhuyin) */
 .key-secondary {
   font-size: 6px;
-  color: #555558;
+  color: #3A5A3A;
   text-align: center;
   letter-spacing: 0.03em;
-  font-family: system-ui, sans-serif;
+  font-family: 'Noto Sans TC', system-ui, sans-serif;
+  line-height: 1;
 }
 
+.key-btn.pressed .key-qwerty    { color: var(--mk-green-dim); }
 .key-btn.pressed .key-secondary { color: var(--mk-green-dim); }
 
 /* Ripple effect on press */
@@ -259,15 +316,15 @@ body {
   width: 0;
   height: 0;
   border-radius: 50%;
-  background: rgba(48, 209, 88, 0.3);
+  background: rgba(48, 209, 88, 0.28);
   pointer-events: none;
   transition: none;
 }
 
 .key-btn.ripple::after {
   inset: auto;
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   transform: translate(-50%, -50%);
   left: 50%;
   top: 50%;
@@ -275,55 +332,49 @@ body {
 }
 
 @keyframes key-ripple {
-  from { transform: translate(-50%, -50%) scale(0); opacity: 0.6; }
-  to   { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+  from { transform: translate(-50%, -50%) scale(0); opacity: 0.55; }
+  to   { transform: translate(-50%, -50%) scale(2.2); opacity: 0; }
 }
 
-/* ── Key Variant Styles by Row / Function ───────────────────── */
+/* ── Key Variant Styles ───────────────────────────────────────── */
 
-/* Row 0 — Function row: dark green tint */
-.key-btn[data-row="0"] {
-  background: linear-gradient(180deg, #182420 0%, #101810 100%);
-  border-color: #1E3020;
-  color: #3EBF5A;
-}
-.key-btn[data-row="0"]:active,
-.key-btn[data-row="0"].pressed {
-  background: linear-gradient(180deg, #0C3018 0%, #081E0E 100%);
-  border-color: var(--mk-green);
-  color: #67EA94;
-}
-
-/* D-pad keys — blue/indigo tint */
+/* D-pad directional keys — indigo/blue tint */
 .key-btn[data-fn="UP"],
 .key-btn[data-fn="DOWN"],
 .key-btn[data-fn="LEFT"],
-.key-btn[data-fn="RIGHT"],
-.key-btn[data-fn="OK"] {
-  background: linear-gradient(180deg, #1C1C30 0%, #141420 100%);
-  border-color: #2A2A48;
-  color: #6878D8;
-  font-size: 11px;
+.key-btn[data-fn="RIGHT"] {
+  background: linear-gradient(180deg, #141828 0%, #0C1018 100%);
+  border-color: #1E2840;
+  color: #4860A8;
+  font-size: 12px;
 }
-.key-btn[data-fn="UP"]:active, .key-btn[data-fn="UP"].pressed,
-.key-btn[data-fn="DOWN"]:active, .key-btn[data-fn="DOWN"].pressed,
-.key-btn[data-fn="LEFT"]:active, .key-btn[data-fn="LEFT"].pressed,
+.key-btn[data-fn="UP"]:active,    .key-btn[data-fn="UP"].pressed,
+.key-btn[data-fn="DOWN"]:active,  .key-btn[data-fn="DOWN"].pressed,
+.key-btn[data-fn="LEFT"]:active,  .key-btn[data-fn="LEFT"].pressed,
 .key-btn[data-fn="RIGHT"]:active, .key-btn[data-fn="RIGHT"].pressed {
-  background: linear-gradient(180deg, #20204A 0%, #141430 100%);
+  background: linear-gradient(180deg, #18204A 0%, #101430 100%);
   border-color: #5868FF;
   color: #8898FF;
 }
+
+/* OK key — green accent (confirm) */
+.key-btn[data-fn="OK"] {
+  background: linear-gradient(180deg, #142818 0%, #0C1C10 100%);
+  border-color: #1E4828;
+  color: #38B858;
+  font-size: 8px;
+}
 .key-btn[data-fn="OK"]:active, .key-btn[data-fn="OK"].pressed {
-  background: linear-gradient(180deg, #1A3828 0%, #0E2418 100%);
+  background: linear-gradient(180deg, #0E2E1C 0%, #091A10 100%);
   border-color: var(--mk-green);
   color: var(--mk-green);
 }
 
 /* DELETE key — red tint */
 .key-btn[data-fn="DEL"] {
-  background: linear-gradient(180deg, #2A1818 0%, #1E1010 100%);
-  border-color: #3C2020;
-  color: #E05050;
+  background: linear-gradient(180deg, #281010 0%, #180808 100%);
+  border-color: #3A1818;
+  color: #B03838;
 }
 .key-btn[data-fn="DEL"]:active, .key-btn[data-fn="DEL"].pressed {
   background: linear-gradient(180deg, #401010 0%, #280808 100%);
@@ -333,7 +384,7 @@ body {
 
 /* SPACE key */
 .key-btn[data-fn="SPACE"] {
-  color: #808088;
+  color: #4A7A4A;
   letter-spacing: 0.3em;
   font-size: 10px;
 }
@@ -342,31 +393,57 @@ body {
 .key-btn[data-fn="T34"],
 .key-btn[data-fn="ZHT2"],
 .key-btn[data-fn="T5A"] {
-  background: linear-gradient(180deg, #22182E 0%, #181020 100%);
-  border-color: #342040;
-  color: #B06AE0;
+  background: linear-gradient(180deg, #1E1428 0%, #14101C 100%);
+  border-color: #2C1C3C;
+  color: #8850C0;
 }
 .key-btn[data-fn="T34"]:active, .key-btn[data-fn="T34"].pressed,
 .key-btn[data-fn="ZHT2"]:active, .key-btn[data-fn="ZHT2"].pressed,
-.key-btn[data-fn="T5A"]:active, .key-btn[data-fn="T5A"].pressed {
+.key-btn[data-fn="T5A"]:active,  .key-btn[data-fn="T5A"].pressed {
   background: linear-gradient(180deg, #3A1A50 0%, #260E38 100%);
   border-color: #BF5AF2;
   color: #D08AFF;
 }
 
-/* MODE key */
+/* MODE key — amber tint */
 .key-btn[data-fn="MODE"] {
-  background: linear-gradient(180deg, #28201A 0%, #1C1610 100%);
-  border-color: #3C2C20;
-  color: #D08040;
+  background: linear-gradient(180deg, #241A0C 0%, #181008 100%);
+  border-color: #382808;
+  color: #A87828;
+}
+.key-btn[data-fn="MODE"]:active, .key-btn[data-fn="MODE"].pressed {
+  background: linear-gradient(180deg, #402808 0%, #2A1808 100%);
+  border-color: #FFD60A;
+  color: #FFD060;
+}
+
+/* SET key — steel blue tint */
+.key-btn[data-fn="SET"] {
+  background: linear-gradient(180deg, #141E2C 0%, #0C1420 100%);
+  border-color: #1E2E3C;
+  color: #3870A0;
+}
+.key-btn[data-fn="SET"]:active, .key-btn[data-fn="SET"].pressed {
+  background: linear-gradient(180deg, #183050 0%, #102038 100%);
+  border-color: #64D2FF;
+  color: #64D2FF;
+}
+
+/* FUNC / BACK keys — muted green */
+.key-btn[data-fn="FUNC"],
+.key-btn[data-fn="BACK"] {
+  background: linear-gradient(180deg, #102010 0%, #081408 100%);
+  border-color: #1A3A1A;
+  color: #386038;
+  font-size: 7px;
 }
 
 /* VOL+/VOL- keys — amber tint */
 .key-btn[data-fn="VOLUP"],
 .key-btn[data-fn="VOLDN"] {
-  background: linear-gradient(180deg, #2A2210 0%, #1C1808 100%);
-  border-color: #3C3010;
-  color: #C0A030;
+  background: linear-gradient(180deg, #261E08 0%, #1A1408 100%);
+  border-color: #382808;
+  color: #907020;
 }
 .key-btn[data-fn="VOLUP"]:active, .key-btn[data-fn="VOLUP"].pressed,
 .key-btn[data-fn="VOLDN"]:active, .key-btn[data-fn="VOLDN"].pressed {
@@ -375,71 +452,97 @@ body {
   color: #FFD60A;
 }
 
-/* ── Device Bottom USB Port ────────────────────────────────── */
+/* ── Device Bottom Row ───────────────────────────────────────── */
 .device-bottom {
   display: flex;
   justify-content: center;
-  margin-top: 12px;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .device-port {
   width: 44px;
   height: 8px;
-  background: #080808;
+  background: #040804;
   border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.95);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.95), 0 0 0 1px #0A1A0A;
 }
 
 .usb-c-port {
   width: 18px;
   height: 4px;
-  background: #161616;
+  background: #0A140A;
   border-radius: 2px;
-  border: 1px solid #242424;
+  border: 1px solid #1A3A1A;
+}
+
+.device-pcb-label {
+  font-size: 6px;
+  color: #1E4A1E;
+  letter-spacing: 1.5px;
+  font-family: 'Courier New', monospace;
+}
+
+.device-led {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--mk-green);
+  box-shadow: 0 0 4px var(--mk-green), 0 0 10px rgba(48,209,88,0.5);
+  animation: led-pulse 3s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+@keyframes led-pulse {
+  0%, 100% { opacity: 0.85; }
+  50%       { opacity: 0.25; }
 }
 
 /* ── Connection Status Bar ─────────────────────────────────── */
-#connection-bar .conn-dot-sim   { background: #48484A; }
+#connection-bar .conn-dot-sim   { background: #1A4A1A; }
 #connection-bar .conn-dot-conn  { background: var(--mk-green); animation: led-pulse 2s infinite; }
 #connection-bar .conn-dot-err   { background: var(--mk-danger); }
 
 /* ── Debug Panel ───────────────────────────────────────────── */
 #debug-log {
   scrollbar-width: thin;
-  scrollbar-color: #333 transparent;
+  scrollbar-color: #1A3A1A transparent;
 }
 #debug-log::-webkit-scrollbar       { width: 3px; }
-#debug-log::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+#debug-log::-webkit-scrollbar-thumb { background: #1A3A1A; border-radius: 2px; }
 
-.dbg { padding: 1px 0; border-bottom: 1px solid #111; font-size: 10px; }
-.dbg-key    { color: #50C870; }
-.dbg-mie    { color: #8090FF; }
-.dbg-serial { color: #FFD060; }
-.dbg-err    { color: #FF7060; }
-.dbg-info   { color: #60C0D0; }
+.dbg { padding: 1px 0; border-bottom: 1px solid #0A1A0A; font-size: 10px; }
+.dbg-key    { color: #30A850; }
+.dbg-mie    { color: #6070D0; }
+.dbg-serial { color: #C0A030; }
+.dbg-err    { color: #D06050; }
+.dbg-info   { color: #40A0B0; }
 
-/* ── Responsive Scaling ────────────────────────────────────── */
-@media (max-height: 920px) {
-  .device-frame { transform: scale(0.94); transform-origin: top center; }
+/* ── Responsive Scaling ─────────────────────────────────────── */
+/* Scale the entire device down on narrow viewports */
+@media (max-width: 400px) {
+  .device-frame-scaler { transform: scale(0.88); }
 }
-@media (max-height: 820px) {
-  .device-frame { transform: scale(0.84); transform-origin: top center; }
+@media (max-width: 360px) {
+  .device-frame-scaler { transform: scale(0.78); }
 }
-@media (max-height: 720px) {
-  .device-frame { transform: scale(0.74); transform-origin: top center; }
+@media (max-width: 320px) {
+  .device-frame-scaler { transform: scale(0.70); }
 }
-@media (max-width: 340px) {
-  .device-frame { transform: scale(0.88); transform-origin: top center; }
+/* Tall screens: give it more room to breathe */
+@media (min-height: 900px) {
+  body { padding-top: 24px; }
 }
 
-/* ── Loading Splash ────────────────────────────────────────── */
+/* ── Loading Splash ──────────────────────────────────────────── */
 #splash {
   position: fixed;
   inset: 0;
-  background: #0A0A0A;
+  background: #050A05;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -459,14 +562,14 @@ body {
 
 .splash-sub {
   font-size: 11px;
-  color: #48484A;
+  color: #1E4A1E;
   letter-spacing: 2px;
 }
 
 .splash-bar {
   width: 160px;
   height: 2px;
-  background: #1C1C1E;
+  background: #0A1C0A;
   border-radius: 1px;
   overflow: hidden;
 }

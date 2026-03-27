@@ -10,7 +10,7 @@
  *
  * Hardware specs:
  *   Controller : ILI9341
- *   Resolution : 240 × 320 (portrait)
+ *   Resolution : 320 × 240 (landscape)
  *   Color depth: 16-bit RGB565
  *   Interface  : SPI @ 40 MHz
  *   Backlight  : RP2350 PWM GPIO
@@ -19,20 +19,20 @@
  */
 export class DisplayHAL {
   /**
-   * @param {HTMLCanvasElement} canvas  The 240×320 canvas element
+   * @param {HTMLCanvasElement} canvas  The 320×240 landscape canvas element
    */
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx    = canvas.getContext('2d', { alpha: false });
-    /** Hardware framebuffer dimensions */
-    this.WIDTH  = 240;
-    this.HEIGHT = 320;
+    /** Hardware framebuffer dimensions (landscape) */
+    this.WIDTH  = 320;
+    this.HEIGHT = 240;
     /** Backlight 0–255 (mirrors RP2350 PWM) */
     this._brightness = 255;
     /** Global alpha applied to all draws (simulates backlight PWM) */
     this._globalAlpha = 1.0;
 
-    // Simulate hardware uint8_t frame_buffer[240*320*2] in SRAM
+    // Simulate hardware uint8_t frame_buffer[320*240*2] in SRAM
     // Each pixel = 2 bytes (RGB565). Kept in sync for WASM hand-off.
     this._frameBuffer = new Uint16Array(this.WIDTH * this.HEIGHT);
 

@@ -143,9 +143,11 @@ function startRenderLoop() {
 
 // ── HTML keyboard grid builder ────────────────────────────────────
 function buildKeyGrid(kbd) {
-  const grid = document.getElementById('key-grid');
-  if (!grid) return;
-  grid.innerHTML = '';
+  const navGrid  = document.getElementById('nav-grid');
+  const coreGrid = document.getElementById('key-grid');
+  if (!navGrid || !coreGrid) return;
+  navGrid.innerHTML  = '';
+  coreGrid.innerHTML = '';
 
   KEY_MATRIX.forEach((keyDef) => {
     const btn = document.createElement('button');
@@ -157,9 +159,19 @@ function buildKeyGrid(kbd) {
     btn.title       = `[R${keyDef.row}C${keyDef.col}] ${keyDef.fn}`;
 
     // Label rendering
-    if (keyDef.chars.length > 0) {
-      // Split Zhuyin characters for display
-      const primary   = keyDef.chars[0] ?? keyDef.label;
+    if (keyDef.label2) {
+      // Two-line: QWERTY/numeric on top (dim), Zhuyin label below (main)
+      const top = document.createElement('span');
+      top.className = 'key-qwerty';
+      top.textContent = keyDef.label2;
+      btn.appendChild(top);
+      const bot = document.createElement('span');
+      bot.className = 'key-primary';
+      bot.textContent = keyDef.label;
+      btn.appendChild(bot);
+    } else if (keyDef.chars.length > 0) {
+      // Single Zhuyin key: primary char + secondary chars
+      const primary   = keyDef.chars[0];
       const secondary = keyDef.chars.slice(1).join('');
       const p = document.createElement('span');
       p.className = 'key-primary';
@@ -172,10 +184,10 @@ function buildKeyGrid(kbd) {
         btn.appendChild(s);
       }
     } else {
-      // Function keys — icon only
+      // Nav / function keys — label only
       const p = document.createElement('span');
       p.className = 'key-primary';
-      p.textContent = keyDef.label.replace('_SPC_', '___');
+      p.textContent = keyDef.label;
       btn.appendChild(p);
     }
 
@@ -199,7 +211,9 @@ function buildKeyGrid(kbd) {
     btn.addEventListener('touchend',   onUp);
     btn.addEventListener('mouseleave', () => btn.classList.remove('pressed'));
 
-    grid.appendChild(btn);
+    // Route: col 5 or row 5 → nav area; everything else → core input grid
+    const isNav = keyDef.col === 5 || keyDef.row === 5;
+    (isNav ? navGrid : coreGrid).appendChild(btn);
   });
 }
 
@@ -214,9 +228,9 @@ function bindTabBarClicks() {
     const cx = (e.clientX - rect.left) * scaleX;
     const cy = (e.clientY - rect.top)  * scaleY;
 
-    // Tab bar: y 298–319, three equal columns
-    if (cy >= 298) {
-      const tabW = 240 / 3;
+    // Tab bar: y 218–240, three equal columns (landscape 320×240)
+    if (cy >= 218) {
+      const tabW = 320 / 3;
       const tabIdx = Math.floor(cx / tabW);
       if (tabIdx === 0) screens.navigateTo('chat',     'fade');
       else if (tabIdx === 1) screens.navigateTo('map', 'fade');
