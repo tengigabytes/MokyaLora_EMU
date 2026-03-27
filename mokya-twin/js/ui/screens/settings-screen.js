@@ -137,7 +137,7 @@ export class SettingsScreen extends BaseScreen {
     // ── Section: About ───────────────────────────────────────────
     y = this._drawSectionHeader(y, 'ℹ About');
     y = this._drawInfoRow(y, 'Firmware', 'MokyaLora v0.1.0-dev');
-    y = this._drawInfoRow(y, 'Build',    '2026-03-26 · Phase 1');
+    y = this._drawInfoRow(y, 'Build',    '2026-03-27 · Phase 2');
     y = this._drawInfoRow(y, 'MIE',      'JS Mock · WASM Phase 4');
     y = this._drawInfoRow(y, 'LoRa MCU', 'RP2350 · Pico SDK 2.x');
     y += 8;

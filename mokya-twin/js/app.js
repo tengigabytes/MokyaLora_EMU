@@ -128,7 +128,7 @@ async function boot() {
 
   // Expose for browser console debugging
   window.mokya = { display, keyboard, mie, serial, renderer, screens };
-  console.log('%c🟢 MokyaLora Digital Twin ready', 'color:#30D158;font-weight:bold');
+  console.log('%c🟢 MokyaLora Digital Twin ready — Phase 2', 'color:#30D158;font-weight:bold');
   console.log('Access globals via window.mokya.*');
 }
 
@@ -317,5 +317,6 @@ function dismissSplash() {
 // ── Start ─────────────────────────────────────────────────────────
 boot().catch(err => {
   console.error('[App] Boot failed:', err);
-  document.getElementById('splash-msg')?.textContent = `Boot error: ${err.message}`;
+  const splashMsg = document.getElementById('splash-msg');
+  if (splashMsg) splashMsg.textContent = `Boot error: ${err.message}`;
 });
