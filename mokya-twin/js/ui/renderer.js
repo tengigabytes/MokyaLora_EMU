@@ -55,15 +55,15 @@ export class MokyaRenderer {
 
     // ── Font stack (mirrors LV_FONT_MONTSERRAT sizes) ────────────
     this.F = {
-      XS:     '8px system-ui,sans-serif',
-      SM:     '10px system-ui,sans-serif',
-      MD:     '12px system-ui,sans-serif',
-      LG:     '14px system-ui,sans-serif',
-      XL:     '17px system-ui,sans-serif',
-      MONO:   '9px "Courier New",monospace',
-      ZH_SM:  '10px "Noto Sans TC","PingFang TC",system-ui,sans-serif',
-      ZH_MD:  '13px "Noto Sans TC","PingFang TC",system-ui,sans-serif',
-      ZH_LG:  '16px "Noto Sans TC","PingFang TC",system-ui,sans-serif',
+      XS:     '10px system-ui,sans-serif',
+      SM:     '12px system-ui,sans-serif',
+      MD:     '14px system-ui,sans-serif',
+      LG:     '17px system-ui,sans-serif',
+      XL:     '21px system-ui,sans-serif',
+      MONO:   '11px "Courier New",monospace',
+      ZH_SM:  '13px "Noto Sans TC","PingFang TC",system-ui,sans-serif',
+      ZH_MD:  '16px "Noto Sans TC","PingFang TC",system-ui,sans-serif',
+      ZH_LG:  '20px "Noto Sans TC","PingFang TC",system-ui,sans-serif',
     };
 
     // Track dirty regions to avoid full redraws (future optimization)

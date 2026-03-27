@@ -120,6 +120,10 @@ async function boot() {
 
   updateSplash(100, '');
 
+  // Scale device to fill page width
+  scaleDevice();
+  window.addEventListener('resize', scaleDevice);
+
   // ── 8. rAF render loop ──────────────────────────────────────────
   setTimeout(() => {
     dismissSplash();
@@ -160,15 +164,21 @@ function buildKeyGrid(kbd) {
 
     // Label rendering
     if (keyDef.label2) {
-      // Two-line: QWERTY/numeric on top (dim), Zhuyin label below (main)
+      // Three-line: QWERTY/numeric on top (dim), Zhuyin label middle (main), calc label bottom
       const top = document.createElement('span');
       top.className = 'key-qwerty';
       top.textContent = keyDef.label2;
       btn.appendChild(top);
-      const bot = document.createElement('span');
-      bot.className = 'key-primary';
-      bot.textContent = keyDef.label;
-      btn.appendChild(bot);
+      const mid = document.createElement('span');
+      mid.className = 'key-primary';
+      mid.textContent = keyDef.label;
+      btn.appendChild(mid);
+      if (keyDef.label3) {
+        const calc = document.createElement('span');
+        calc.className = 'key-calc';
+        calc.textContent = keyDef.label3;
+        btn.appendChild(calc);
+      }
     } else if (keyDef.chars.length > 0) {
       // Single Zhuyin key: primary char + secondary chars
       const primary   = keyDef.chars[0];
@@ -215,6 +225,20 @@ function buildKeyGrid(kbd) {
     const isNav = keyDef.col === 5 || keyDef.row === 5;
     (isNav ? navGrid : coreGrid).appendChild(btn);
   });
+}
+
+// ── Device scaler: fill page width via CSS zoom ───────────────────
+function scaleDevice() {
+  const scaler = document.querySelector('.device-frame-scaler');
+  const frame  = document.querySelector('.device-frame');
+  if (!scaler || !frame) return;
+  // Reset zoom first to measure natural width
+  scaler.style.zoom = 1;
+  const naturalW = frame.offsetWidth;
+  if (!naturalW) return;
+  const availW   = window.innerWidth - 8; // 4px margin each side
+  const ratio    = Math.min(availW / naturalW, 1.6); // cap at 1.6× on desktop
+  scaler.style.zoom = ratio;
 }
 
 // ── Tab bar click handler ─────────────────────────────────────────

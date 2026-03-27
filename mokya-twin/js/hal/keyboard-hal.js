@@ -38,52 +38,52 @@
  */
 export const KEY_MATRIX = [
   // ── Row 0 — Numeric / Zhuyin top row ────────────────────────────
-  { idx: 0,  row:0, col:0, label:'ㄅ ㄉ',   label2:'1 2', fn:'BD',    chars:['ㄅ','ㄉ'],      keyCode:'Digit1',    cat:'zhuyin' },
-  { idx: 1,  row:0, col:1, label:'ˇ ˋ',     label2:'3 4', fn:'T34',   chars:['ˇ','ˋ'],        keyCode:'Digit3',    cat:'tone'   },
-  { idx: 2,  row:0, col:2, label:'ㄓ ˊ',    label2:'5 6', fn:'ZHT2',  chars:['ㄓ','ˊ'],       keyCode:'Digit5',    cat:'zhuyin' },
-  { idx: 3,  row:0, col:3, label:'˙ ㄚ',    label2:'7 8', fn:'T5A',   chars:['˙','ㄚ'],        keyCode:'Digit7',    cat:'zhuyin' },
-  { idx: 4,  row:0, col:4, label:'ㄞㄢㄦ',  label2:'9 0', fn:'AIANR', chars:['ㄞ','ㄢ','ㄦ'], keyCode:'Digit9',    cat:'zhuyin' },
-  { idx: 5,  row:0, col:5, label:'►',                     fn:'RIGHT', chars:[],                keyCode:'ArrowRight',cat:'dpad'   },
+  { idx: 0,  row:0, col:0, label:'ㄅ ㄉ',  label2:'1 2', label3:'ANS', fn:'BD',    chars:['ㄅ','ㄉ'],      keyCode:'Digit1',    cat:'zhuyin' },
+  { idx: 1,  row:0, col:1, label:'ˇ ˋ',    label2:'3 4', label3:'7',   fn:'T34',   chars:['ˇ','ˋ'],        keyCode:'Digit3',    cat:'tone'   },
+  { idx: 2,  row:0, col:2, label:'ㄓ ˊ',   label2:'5 6', label3:'8',   fn:'ZHT2',  chars:['ㄓ','ˊ'],       keyCode:'Digit5',    cat:'zhuyin' },
+  { idx: 3,  row:0, col:3, label:'˙ ㄚ',   label2:'7 8', label3:'9',   fn:'T5A',   chars:['˙','ㄚ'],        keyCode:'Digit7',    cat:'zhuyin' },
+  { idx: 4,  row:0, col:4, label:'ㄞㄢㄦ', label2:'9 0', label3:'÷',   fn:'AIANR', chars:['ㄞ','ㄢ','ㄦ'], keyCode:'Digit9',    cat:'zhuyin' },
+  { idx: 5,  row:0, col:5, label:'►',                                   fn:'RIGHT', chars:[],               keyCode:'ArrowRight',cat:'dpad'   },
 
   // ── Row 1 — QWERTY top / Zhuyin second row ──────────────────────
-  { idx: 6,  row:1, col:0, label:'ㄆ ㄊ',   label2:'Q W', fn:'PT',    chars:['ㄆ','ㄊ'],      keyCode:'KeyQ',      cat:'zhuyin' },
-  { idx: 7,  row:1, col:1, label:'ㄍ ㄐ',   label2:'E R', fn:'GJ',    chars:['ㄍ','ㄐ'],      keyCode:'KeyE',      cat:'zhuyin' },
-  { idx: 8,  row:1, col:2, label:'ㄔ ㄗ',   label2:'T Y', fn:'CHZ',   chars:['ㄔ','ㄗ'],      keyCode:'KeyT',      cat:'zhuyin' },
-  { idx: 9,  row:1, col:3, label:'ㄧ ㄛ',   label2:'U I', fn:'IO',    chars:['ㄧ','ㄛ'],      keyCode:'KeyU',      cat:'zhuyin' },
-  { idx: 10, row:1, col:4, label:'ㄟ ㄣ',   label2:'O P', fn:'EIN',   chars:['ㄟ','ㄣ'],      keyCode:'KeyO',      cat:'zhuyin' },
-  { idx: 11, row:1, col:5, label:'▼',                     fn:'DOWN',  chars:[],                keyCode:'ArrowDown', cat:'dpad'   },
+  { idx: 6,  row:1, col:0, label:'ㄆ ㄊ',  label2:'Q W', label3:'(',   fn:'PT',    chars:['ㄆ','ㄊ'],      keyCode:'KeyQ',      cat:'zhuyin' },
+  { idx: 7,  row:1, col:1, label:'ㄍ ㄐ',  label2:'E R', label3:'4',   fn:'GJ',    chars:['ㄍ','ㄐ'],      keyCode:'KeyE',      cat:'zhuyin' },
+  { idx: 8,  row:1, col:2, label:'ㄔ ㄗ',  label2:'T Y', label3:'5',   fn:'CHZ',   chars:['ㄔ','ㄗ'],      keyCode:'KeyT',      cat:'zhuyin' },
+  { idx: 9,  row:1, col:3, label:'ㄧ ㄛ',  label2:'U I', label3:'6',   fn:'IO',    chars:['ㄧ','ㄛ'],      keyCode:'KeyU',      cat:'zhuyin' },
+  { idx: 10, row:1, col:4, label:'ㄟ ㄣ',  label2:'O P', label3:'×',   fn:'EIN',   chars:['ㄟ','ㄣ'],      keyCode:'KeyO',      cat:'zhuyin' },
+  { idx: 11, row:1, col:5, label:'▼',                                   fn:'DOWN',  chars:[],               keyCode:'ArrowDown', cat:'dpad'   },
 
   // ── Row 2 — QWERTY middle / Zhuyin third row ────────────────────
-  { idx: 12, row:2, col:0, label:'ㄇ ㄋ',   label2:'A S', fn:'MN',    chars:['ㄇ','ㄋ'],      keyCode:'KeyA',      cat:'zhuyin' },
-  { idx: 13, row:2, col:1, label:'ㄎ ㄑ',   label2:'D F', fn:'KQ',    chars:['ㄎ','ㄑ'],      keyCode:'KeyD',      cat:'zhuyin' },
-  { idx: 14, row:2, col:2, label:'ㄕ ㄘ',   label2:'G H', fn:'SHC',   chars:['ㄕ','ㄘ'],      keyCode:'KeyG',      cat:'zhuyin' },
-  { idx: 15, row:2, col:3, label:'ㄨ ㄜ',   label2:'J K', fn:'UE',    chars:['ㄨ','ㄜ'],      keyCode:'KeyJ',      cat:'zhuyin' },
-  { idx: 16, row:2, col:4, label:'ㄠ ㄤ',   label2:'L',   fn:'AOANG', chars:['ㄠ','ㄤ'],      keyCode:'KeyL',      cat:'zhuyin' },
-  { idx: 17, row:2, col:5, label:'SET',                   fn:'SET',   chars:[],                keyCode:'F2',        cat:'func'   },
+  { idx: 12, row:2, col:0, label:'ㄇ ㄋ',  label2:'A S', label3:')',   fn:'MN',    chars:['ㄇ','ㄋ'],      keyCode:'KeyA',      cat:'zhuyin' },
+  { idx: 13, row:2, col:1, label:'ㄎ ㄑ',  label2:'D F', label3:'1',   fn:'KQ',    chars:['ㄎ','ㄑ'],      keyCode:'KeyD',      cat:'zhuyin' },
+  { idx: 14, row:2, col:2, label:'ㄕ ㄘ',  label2:'G H', label3:'2',   fn:'SHC',   chars:['ㄕ','ㄘ'],      keyCode:'KeyG',      cat:'zhuyin' },
+  { idx: 15, row:2, col:3, label:'ㄨ ㄜ',  label2:'J K', label3:'3',   fn:'UE',    chars:['ㄨ','ㄜ'],      keyCode:'KeyJ',      cat:'zhuyin' },
+  { idx: 16, row:2, col:4, label:'ㄠ ㄤ',  label2:'L',   label3:'-',   fn:'AOANG', chars:['ㄠ','ㄤ'],      keyCode:'KeyL',      cat:'zhuyin' },
+  { idx: 17, row:2, col:5, label:'SET',                                 fn:'SET',   chars:[],               keyCode:'F2',        cat:'func'   },
 
   // ── Row 3 — QWERTY bottom / Zhuyin fourth row ───────────────────
-  { idx: 18, row:3, col:0, label:'ㄈ ㄌ',   label2:'Z X', fn:'FL',    chars:['ㄈ','ㄌ'],      keyCode:'KeyZ',      cat:'zhuyin' },
-  { idx: 19, row:3, col:1, label:'ㄏ ㄒ',   label2:'C V', fn:'HX',    chars:['ㄏ','ㄒ'],      keyCode:'KeyC',      cat:'zhuyin' },
-  { idx: 20, row:3, col:2, label:'ㄖ ㄙ',   label2:'B N', fn:'RS',    chars:['ㄖ','ㄙ'],      keyCode:'KeyB',      cat:'zhuyin' },
-  { idx: 21, row:3, col:3, label:'ㄩ ㄝ',   label2:'M',   fn:'YE',    chars:['ㄩ','ㄝ'],      keyCode:'KeyM',      cat:'zhuyin' },
-  { idx: 22, row:3, col:4, label:'ㄡ ㄥ',   label2:'--',  fn:'OUENG', chars:['ㄡ','ㄥ'],      keyCode:'Semicolon', cat:'zhuyin' },
-  { idx: 23, row:3, col:5, label:'⌫ DEL',               fn:'DEL',   chars:[],                keyCode:'Backspace', cat:'del'    },
+  { idx: 18, row:3, col:0, label:'ㄈ ㄌ',  label2:'Z X', label3:'AC',  fn:'FL',    chars:['ㄈ','ㄌ'],      keyCode:'KeyZ',      cat:'zhuyin' },
+  { idx: 19, row:3, col:1, label:'ㄏ ㄒ',  label2:'C V', label3:'0',   fn:'HX',    chars:['ㄏ','ㄒ'],      keyCode:'KeyC',      cat:'zhuyin' },
+  { idx: 20, row:3, col:2, label:'ㄖ ㄙ',  label2:'B N', label3:'.',   fn:'RS',    chars:['ㄖ','ㄙ'],      keyCode:'KeyB',      cat:'zhuyin' },
+  { idx: 21, row:3, col:3, label:'ㄩ ㄝ',  label2:'M',   label3:'xⁿ',  fn:'YE',    chars:['ㄩ','ㄝ'],      keyCode:'KeyM',      cat:'zhuyin' },
+  { idx: 22, row:3, col:4, label:'ㄡ ㄥ',  label2:'--',  label3:'+',   fn:'OUENG', chars:['ㄡ','ㄥ'],      keyCode:'Semicolon', cat:'zhuyin' },
+  { idx: 23, row:3, col:5, label:'⌫ DEL',                              fn:'DEL',   chars:[],               keyCode:'Backspace', cat:'del'    },
 
   // ── Row 4 — Function bottom row ─────────────────────────────────
-  { idx: 24, row:4, col:0, label:'MODE',                  fn:'MODE',  chars:[],                keyCode:'Tab',       cat:'mode'   },
-  { idx: 25, row:4, col:1, label:'TAB',                   fn:'TAB',   chars:['\t'],            keyCode:'Backquote', cat:'func'   },
-  { idx: 26, row:4, col:2, label:'___',                   fn:'SPACE', chars:[' '],             keyCode:'Space',     cat:'space'  },
-  { idx: 27, row:4, col:3, label:'，SYM',                fn:'SYM',   chars:['，'],             keyCode:'Comma',     cat:'func'   },
-  { idx: 28, row:4, col:4, label:'。.？',                fn:'PUNCT', chars:['。','.','？'],   keyCode:'Period',    cat:'func'   },
-  { idx: 29, row:4, col:5, label:'VOL+',                  fn:'VOLUP', chars:[],                keyCode:'Equal',     cat:'vol'    },
+  { idx: 24, row:4, col:0, label:'MODE',                               fn:'MODE',  chars:[],               keyCode:'Tab',       cat:'mode'   },
+  { idx: 25, row:4, col:1, label:'TAB',                                fn:'TAB',   chars:['\t'],           keyCode:'Backquote', cat:'func'   },
+  { idx: 26, row:4, col:2, label:'___',                                fn:'SPACE', chars:[' '],            keyCode:'Space',     cat:'space'  },
+  { idx: 27, row:4, col:3, label:'，SYM',                             fn:'SYM',   chars:['，'],            keyCode:'Comma',     cat:'func'   },
+  { idx: 28, row:4, col:4, label:'。.？',                             fn:'PUNCT', chars:['。','.','？'],  keyCode:'Period',    cat:'func'   },
+  { idx: 29, row:4, col:5, label:'VOL+',                               fn:'VOLUP', chars:[],               keyCode:'Equal',     cat:'vol'    },
 
   // ── Row 5 — Navigation row ───────────────────────────────────────
-  { idx: 30, row:5, col:0, label:'FN',                    fn:'FUNC',  chars:[],                keyCode:'F1',        cat:'func'   },
-  { idx: 31, row:5, col:1, label:'← BCK',               fn:'BACK',  chars:[],                keyCode:'Escape',    cat:'func'   },
-  { idx: 32, row:5, col:2, label:'▲',                     fn:'UP',    chars:[],                keyCode:'ArrowUp',   cat:'dpad'   },
-  { idx: 33, row:5, col:3, label:'◄',                     fn:'LEFT',  chars:[],                keyCode:'ArrowLeft', cat:'dpad'   },
-  { idx: 34, row:5, col:4, label:'✓ OK',                 fn:'OK',    chars:[],                keyCode:'Enter',     cat:'dpad'   },
-  { idx: 35, row:5, col:5, label:'VOL-',                  fn:'VOLDN', chars:[],                keyCode:'Minus',     cat:'vol'    },
+  { idx: 30, row:5, col:0, label:'FN',                                 fn:'FUNC',  chars:[],               keyCode:'F1',        cat:'func'   },
+  { idx: 31, row:5, col:1, label:'← BCK',                            fn:'BACK',  chars:[],               keyCode:'Escape',    cat:'func'   },
+  { idx: 32, row:5, col:2, label:'▲',                                  fn:'UP',    chars:[],               keyCode:'ArrowUp',   cat:'dpad'   },
+  { idx: 33, row:5, col:3, label:'◄',                                  fn:'LEFT',  chars:[],               keyCode:'ArrowLeft', cat:'dpad'   },
+  { idx: 34, row:5, col:4, label:'✓ OK',                              fn:'OK',    chars:[],               keyCode:'Enter',     cat:'dpad'   },
+  { idx: 35, row:5, col:5, label:'VOL-',                               fn:'VOLDN', chars:[],               keyCode:'Minus',     cat:'vol'    },
 ];
 
 /** Lookup by function name */
@@ -179,6 +179,12 @@ export class KeyboardHAL extends EventTarget {
           }));
         }
       }
+    }
+
+    // Keys with 0 or 1 chars don't need multi-tap — fire immediately
+    if (key.chars.length <= 1) {
+      this.dispatchEvent(new CustomEvent('key:tap', { detail: { key, tapCount: 1 } }));
+      return;
     }
 
     const existing = this._tapCounters.get(key.fn);

@@ -171,8 +171,6 @@ body {
   width: var(--screen-w);
   height: var(--screen-h);
   border-radius: 3px;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
   position: relative;
   z-index: 1;
 }
@@ -184,21 +182,21 @@ body {
   gap: 5px;
 }
 
-/* ── Navigation Area — D-pad cross layout ────────────────────── */
+/* ── Navigation Area — D-pad centered in 5-col grid ─────────── */
 /*
-  Visual layout (4 col × 3 row):
-    [FUNC] [UP  ] [SET ] [VOL+]
-    [LEFT] [OK  ] [► ] [ -- ]
-    [BACK] [DOWN] [DEL] [VOL-]
+  Visual layout (5 col × 3 row):
+    [FUNC] [    ] [ ▲ ] [SET ] [VOL+]
+    [    ] [ ◄  ] [ OK] [ ► ] [    ]
+    [BACK] [    ] [ ▼ ] [DEL ] [VOL-]
 */
 .kbd-nav-area {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  grid-template-rows: repeat(3, 30px);
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: repeat(3, 44px);
   grid-template-areas:
-    "nfunc  nup    nset   nvolup"
-    "nleft  nok    nright ."
-    "nback  ndown  ndel   nvoldn";
+    "nfunc  .      nup    nset   nvolup"
+    ".      nleft  nok    nright ."
+    "nback  .      ndown  ndel   nvoldn";
   gap: 3px;
 }
 
@@ -215,11 +213,6 @@ body {
 .kbd-nav-area .key-btn[data-fn="DEL"]   { grid-area: ndel; }
 .kbd-nav-area .key-btn[data-fn="VOLDN"] { grid-area: nvoldn; }
 
-/* Nav keys are slightly shorter */
-.kbd-nav-area .key-btn {
-  height: 30px;
-}
-
 /* ── Core Input Area — 5×5 + function row ────────────────────── */
 .kbd-core-area {
   display: grid;
@@ -229,12 +222,12 @@ body {
 
 /* ── Key Buttons ─────────────────────────────────────────────── */
 .key-btn {
-  height: 38px;
+  height: 44px;
   min-width: 0;
   border-radius: 5px;
   border: 1px solid var(--pcb-key-border);
   background: linear-gradient(180deg, #142814 0%, #0C1C0C 100%);
-  color: #4A7A4A;
+  color: #C0DCC0;
   font-size: 7.5px;
   line-height: 1.1;
   cursor: pointer;
@@ -257,7 +250,7 @@ body {
 .key-btn:hover {
   background: linear-gradient(180deg, #1C3A1C 0%, #142814 100%);
   border-color: #2A5A2A;
-  color: #60A060;
+  color: #D8F0D8;
 }
 
 /* Press state — simulates physical key travel + PCB green glow */
@@ -274,8 +267,8 @@ body {
 
 /* Top line: QWERTY/numeric letters (dim monospace) */
 .key-qwerty {
-  font-size: 5.5px;
-  color: #3A5A3A;
+  font-size: 7px;
+  color: #6A9A6A;
   text-align: center;
   letter-spacing: 0.1em;
   font-family: 'Courier New', monospace;
@@ -285,7 +278,7 @@ body {
 
 /* Main label: Zhuyin phonemes or function name */
 .key-primary {
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 600;
   color: inherit;
   text-align: center;
@@ -297,16 +290,28 @@ body {
 
 /* Third char (multi-char Zhuyin) */
 .key-secondary {
-  font-size: 6px;
-  color: #3A5A3A;
+  font-size: 7px;
+  color: #6A9A6A;
   text-align: center;
   letter-spacing: 0.03em;
   font-family: 'Noto Sans TC', system-ui, sans-serif;
   line-height: 1;
 }
 
+/* Bottom line: calculator-mode label (teal) */
+.key-calc {
+  font-size: 6px;
+  color: #2AB8B8;
+  text-align: center;
+  letter-spacing: 0.05em;
+  font-family: 'Courier New', monospace;
+  white-space: nowrap;
+  line-height: 1;
+}
+
 .key-btn.pressed .key-qwerty    { color: var(--mk-green-dim); }
 .key-btn.pressed .key-secondary { color: var(--mk-green-dim); }
+.key-btn.pressed .key-calc      { color: #40D8D8; }
 
 /* Ripple effect on press */
 .key-btn::after {
@@ -523,16 +528,7 @@ body {
 .dbg-info   { color: #40A0B0; }
 
 /* ── Responsive Scaling ─────────────────────────────────────── */
-/* Scale the entire device down on narrow viewports */
-@media (max-width: 400px) {
-  .device-frame-scaler { transform: scale(0.88); }
-}
-@media (max-width: 360px) {
-  .device-frame-scaler { transform: scale(0.78); }
-}
-@media (max-width: 320px) {
-  .device-frame-scaler { transform: scale(0.70); }
-}
+/* JS scaleDevice() handles zoom via element.style.zoom at runtime */
 /* Tall screens: give it more room to breathe */
 @media (min-height: 900px) {
   body { padding-top: 24px; }
