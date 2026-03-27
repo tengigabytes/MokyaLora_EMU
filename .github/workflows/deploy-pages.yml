@@ -28,10 +28,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          submodules: false   # Don't need MokyaLora submodule for PWA deploy
+          submodules: false   # MokyaLora submodule not needed for PWA deploy
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true   # Auto-enable GitHub Pages if not yet configured
 
       - name: Upload mokya-twin as Pages artifact
         uses: actions/upload-pages-artifact@v3
