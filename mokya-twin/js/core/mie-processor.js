@@ -48,25 +48,31 @@ export const CompositionState = Object.freeze({
 
 /**
  * English multi-tap map — key.fn → Latin characters (Nokia T9-style).
- * 26 letters distributed across 16 Zhuyin character keys.
+ * Keyed by the new hardware fn names from keyboard-hal.js.
  */
 const ENGLISH_CHARS = {
-  BP:      ['a', 'b'],
-  MF:      ['c', 'd'],
-  DT:      ['e', 'f'],
-  NL:      ['g', 'h'],
-  GK:      ['i', 'j'],
-  HJ:      ['k', 'l'],
-  QX:      ['m', 'n'],
-  ZHCH:    ['o', 'p'],
-  SHR:     ['q', 'r'],
-  ZCS:     ['s', 't'],
-  IUY:     ['u', 'v'],
-  AOEH:    ['w', 'x'],
-  EAIEI:   ['y', 'z'],
-  AOUANG:  ['1', '2', '3'],
-  ENANGEN: ['4', '5', '6'],
-  ERNN:    ['7', '8', '9', '0'],
+  BD:    ['1', '2'],
+  T34:   ['3', '4'],
+  ZHT2:  ['5', '6'],
+  T5A:   ['7', '8'],
+  AIANR: ['9', '0'],
+  PT:    ['q', 'w'],
+  GJ:    ['e', 'r'],
+  CHZ:   ['t', 'y'],
+  IO:    ['u', 'i'],
+  EIN:   ['o', 'p'],
+  MN:    ['a', 's'],
+  KQ:    ['d', 'f'],
+  SHC:   ['g', 'h'],
+  UE:    ['j', 'k'],
+  AOANG: ['l'],
+  FL:    ['z', 'x'],
+  HX:    ['c', 'v'],
+  RS:    ['b', 'n'],
+  YE:    ['m'],
+  OUENG: ['-', '_'],
+  SYM:   ['，', ','],
+  PUNCT: ['。', '.', '？', '?'],
 };
 
 /** Which phoneme category a symbol belongs to */
@@ -147,22 +153,25 @@ export class MIE_Processor extends EventTarget {
       this._emit('cursor:move', { direction: fn.toLowerCase() });
       return;
     }
-    if (fn === 'OK')    { this._confirmCandidate(); return; }
+    if (fn === 'OK') {
+      if (this.compBuffer.length > 0) this._confirmCandidate();
+      else this._commitAndSend();
+      return;
+    }
     if (fn === 'BACK')  { this._emit('action:back', {}); return; }
-    if (fn === 'MENU')  { this._emit('action:menu', {}); return; }
-    if (fn === 'ENTER') { this._commitAndSend(); return; }
     if (fn === 'DEL')   { this._delete(); return; }
-    if (fn === 'SPACE') { this._appendChar(' '); return; }
-    if (fn === 'POWER') { /* handled by app */ return; }
-    if (fn === 'HELP')  { /* handled by app */ return; }
+    if (fn === 'SPACE') {
+      // In Zhuyin: SPACE = tone 1 (¯) when a phoneme is pending
+      if (this.mode === InputMode.ZHUYIN && this.compBuffer.length > 0) {
+        this._applyTone('¯');
+      } else {
+        this._appendChar(' ');
+      }
+      return;
+    }
 
     // Mode switch
-    if (fn === 'MODE' || fn === 'ENLANG') { this._cycleMode(); return; }
-
-    // Tone keys — only meaningful in ZHUYIN mode
-    if (fn.startsWith('TONE') && this.mode === InputMode.ZHUYIN) {
-      this._applyTone(key.chars[0]); return;
-    }
+    if (fn === 'MODE') { this._cycleMode(); return; }
 
     // Character input — route by mode
     switch (this.mode) {

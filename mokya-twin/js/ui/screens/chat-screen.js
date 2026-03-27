@@ -193,14 +193,6 @@ export class ChatScreen extends BaseScreen {
     if (key.fn === 'UP')   { this._scrollY = Math.max(0, this._scrollY - 30); return; }
     if (key.fn === 'DOWN') { this._scrollY = Math.min(this._maxScroll, this._scrollY + 30); return; }
     if (key.fn === 'RIGHT') { this.goto('map', 'slide_l'); return; }
-    // TONE1–5: quick candidate select when candidates are showing
-    if (key.fn.startsWith('TONE') && this._compState.candidates.length > 0) {
-      const idx = parseInt(key.fn.replace('TONE', ''), 10) - 1;
-      if (idx >= 0 && idx < this._compState.candidates.length) {
-        this.mie.selectCandidate(idx);
-        return;
-      }
-    }
     // Forward everything else to MIE
     this.mie.processKeyTap({ key, tapCount });
   }

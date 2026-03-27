@@ -222,11 +222,11 @@ export class SettingsScreen extends BaseScreen {
     if (key.fn === 'DOWN') { this._scrollY += 20; return; }
     if (key.fn === 'LEFT') { this.goto('map', 'slide_r'); return; }
     if (key.fn === 'BACK') { this.goto('chat', 'slide_r'); return; }
-    if (key.fn === 'TONE1') {
+    if (key.fn === 'VOLUP') {
       this._brightness = Math.min(255, this._brightness + 20);
       this.r.d.setBrightness(this._brightness);
     }
-    if (key.fn === 'TONE2') {
+    if (key.fn === 'VOLDN') {
       this._brightness = Math.max(20, this._brightness - 20);
       this.r.d.setBrightness(this._brightness);
     }

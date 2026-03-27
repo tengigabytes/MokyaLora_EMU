@@ -331,13 +331,6 @@ body {
   color: #FF8080;
 }
 
-/* ENTER key — green accent */
-.key-btn[data-fn="ENTER"] {
-  color: #50C070;
-  background: linear-gradient(180deg, #182818 0%, #101A10 100%);
-  border-color: #203020;
-}
-
 /* SPACE key */
 .key-btn[data-fn="SPACE"] {
   color: #808088;
@@ -345,24 +338,41 @@ body {
   font-size: 10px;
 }
 
-/* Tone keys — purple tint */
-.key-btn[data-fn^="TONE"] {
+/* Tone-bearing keys (T34, ZHT2, T5A) — purple tint */
+.key-btn[data-fn="T34"],
+.key-btn[data-fn="ZHT2"],
+.key-btn[data-fn="T5A"] {
   background: linear-gradient(180deg, #22182E 0%, #181020 100%);
   border-color: #342040;
   color: #B06AE0;
 }
-.key-btn[data-fn^="TONE"]:active, .key-btn[data-fn^="TONE"].pressed {
+.key-btn[data-fn="T34"]:active, .key-btn[data-fn="T34"].pressed,
+.key-btn[data-fn="ZHT2"]:active, .key-btn[data-fn="ZHT2"].pressed,
+.key-btn[data-fn="T5A"]:active, .key-btn[data-fn="T5A"].pressed {
   background: linear-gradient(180deg, #3A1A50 0%, #260E38 100%);
   border-color: #BF5AF2;
   color: #D08AFF;
 }
 
-/* MODE / LANG keys */
-.key-btn[data-fn="MODE"],
-.key-btn[data-fn="ENLANG"] {
+/* MODE key */
+.key-btn[data-fn="MODE"] {
   background: linear-gradient(180deg, #28201A 0%, #1C1610 100%);
   border-color: #3C2C20;
   color: #D08040;
+}
+
+/* VOL+/VOL- keys — amber tint */
+.key-btn[data-fn="VOLUP"],
+.key-btn[data-fn="VOLDN"] {
+  background: linear-gradient(180deg, #2A2210 0%, #1C1808 100%);
+  border-color: #3C3010;
+  color: #C0A030;
+}
+.key-btn[data-fn="VOLUP"]:active, .key-btn[data-fn="VOLUP"].pressed,
+.key-btn[data-fn="VOLDN"]:active, .key-btn[data-fn="VOLDN"].pressed {
+  background: linear-gradient(180deg, #403010 0%, #2A2008 100%);
+  border-color: #FFD60A;
+  color: #FFD60A;
 }
 
 /* ── Device Bottom USB Port ────────────────────────────────── */
