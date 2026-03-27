@@ -42,6 +42,13 @@ export class MapScreen extends BaseScreen {
     this._driftInterval = setInterval(() => this._driftNodes(), 5000);
   }
 
+  onLeave(toScreen) {
+    if (this._driftInterval) {
+      clearInterval(this._driftInterval);
+      this._driftInterval = null;
+    }
+  }
+
   _driftNodes() {
     for (const n of this._nodes) {
       if (n.id !== 'ME') {
