@@ -194,9 +194,9 @@ body {
   grid-template-columns: repeat(5, 1fr);
   grid-template-rows: repeat(3, 44px);
   grid-template-areas:
-    "nfunc  .      nup    nset   nvolup"
+    ".      nfunc  nup    nset   nvolup"
     ".      nleft  nok    nright ."
-    "nback  .      ndown  ndel   nvoldn";
+    ".      nback  ndown  ndel   nvoldn";
   gap: 3px;
 }
 
@@ -265,12 +265,12 @@ body {
 
 /* ── Key Label Elements ───────────────────────────────────────── */
 
-/* Top line: QWERTY/numeric letters (dim monospace) */
+/* Top line: QWERTY/numeric letters */
 .key-qwerty {
-  font-size: 7px;
-  color: #6A9A6A;
+  font-size: 9px;
+  color: #A0D0A0;
   text-align: center;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   font-family: 'Courier New', monospace;
   white-space: nowrap;
   line-height: 1;

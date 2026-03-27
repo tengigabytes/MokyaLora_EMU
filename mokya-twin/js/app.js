@@ -179,22 +179,8 @@ function buildKeyGrid(kbd) {
         calc.textContent = keyDef.label3;
         btn.appendChild(calc);
       }
-    } else if (keyDef.chars.length > 0) {
-      // Single Zhuyin key: primary char + secondary chars
-      const primary   = keyDef.chars[0];
-      const secondary = keyDef.chars.slice(1).join('');
-      const p = document.createElement('span');
-      p.className = 'key-primary';
-      p.textContent = primary;
-      btn.appendChild(p);
-      if (secondary) {
-        const s = document.createElement('span');
-        s.className = 'key-secondary';
-        s.textContent = secondary;
-        btn.appendChild(s);
-      }
     } else {
-      // Nav / function keys — label only
+      // Nav / function / special keys — always use keyDef.label (not chars[])
       const p = document.createElement('span');
       p.className = 'key-primary';
       p.textContent = keyDef.label;

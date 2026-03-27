@@ -72,14 +72,14 @@ export const KEY_MATRIX = [
   // ── Row 4 — Function bottom row ─────────────────────────────────
   { idx: 24, row:4, col:0, label:'MODE',                               fn:'MODE',  chars:[],               keyCode:'Tab',       cat:'mode'   },
   { idx: 25, row:4, col:1, label:'TAB',                                fn:'TAB',   chars:['\t'],           keyCode:'Backquote', cat:'func'   },
-  { idx: 26, row:4, col:2, label:'___',                                fn:'SPACE', chars:[' '],            keyCode:'Space',     cat:'space'  },
-  { idx: 27, row:4, col:3, label:'，SYM',                             fn:'SYM',   chars:['，'],            keyCode:'Comma',     cat:'func'   },
+  { idx: 26, row:4, col:2, label:'SPC',                                fn:'SPACE', chars:[' '],            keyCode:'Space',     cat:'space'  },
+  { idx: 27, row:4, col:3, label:'SYM',                                fn:'SYM',   chars:['，'],            keyCode:'Comma',     cat:'func'   },
   { idx: 28, row:4, col:4, label:'。.？',                             fn:'PUNCT', chars:['。','.','？'],  keyCode:'Period',    cat:'func'   },
   { idx: 29, row:4, col:5, label:'VOL+',                               fn:'VOLUP', chars:[],               keyCode:'Equal',     cat:'vol'    },
 
   // ── Row 5 — Navigation row ───────────────────────────────────────
   { idx: 30, row:5, col:0, label:'FN',                                 fn:'FUNC',  chars:[],               keyCode:'F1',        cat:'func'   },
-  { idx: 31, row:5, col:1, label:'← BCK',                            fn:'BACK',  chars:[],               keyCode:'Escape',    cat:'func'   },
+  { idx: 31, row:5, col:1, label:'BCK',                               fn:'BACK',  chars:[],               keyCode:'Escape',    cat:'func'   },
   { idx: 32, row:5, col:2, label:'▲',                                  fn:'UP',    chars:[],               keyCode:'ArrowUp',   cat:'dpad'   },
   { idx: 33, row:5, col:3, label:'◄',                                  fn:'LEFT',  chars:[],               keyCode:'ArrowLeft', cat:'dpad'   },
   { idx: 34, row:5, col:4, label:'✓ OK',                              fn:'OK',    chars:[],               keyCode:'Enter',     cat:'dpad'   },
@@ -104,7 +104,7 @@ export class KeyboardHAL extends EventTarget {
     /** Multi-tap tracking per key function */
     this._tapCounters = new Map(); // fn → { count, timerId }
     /** Multi-tap confirmation window (ms) */
-    this.multiTapWindowMs = 600;
+    this.multiTapWindowMs = 300;
     /** Debounce delay (mirrors RP2350 ~20ms) */
     this.debounceMs = 20;
 
@@ -167,26 +167,24 @@ export class KeyboardHAL extends EventTarget {
    * A tap on a DIFFERENT key flushes the pending tap immediately.
    */
   _registerTap(key) {
-    // Flush any pending different-key tap immediately
+    // A tap on a different key clears the other key's pending counter
+    // (its event was already fired immediately, so no re-dispatch needed)
     for (const [fn, entry] of this._tapCounters.entries()) {
       if (fn !== key.fn) {
         clearTimeout(entry.timerId);
         this._tapCounters.delete(fn);
-        const k = KEY_MATRIX.find(k => k.fn === fn);
-        if (k) {
-          this.dispatchEvent(new CustomEvent('key:tap', {
-            detail: { key: k, tapCount: entry.count }
-          }));
-        }
       }
     }
 
-    // Keys with 0 or 1 chars don't need multi-tap — fire immediately
+    // All keys fire key:tap immediately — no wait needed for single/no-char keys
     if (key.chars.length <= 1) {
       this.dispatchEvent(new CustomEvent('key:tap', { detail: { key, tapCount: 1 } }));
       return;
     }
 
+    // Multi-char keys: increment counter and fire immediately with current count.
+    // A subsequent tap within multiTapWindowMs will fire again with count+1,
+    // letting MIE cycle to the next character (replaces previous output).
     const existing = this._tapCounters.get(key.fn);
     if (existing) {
       clearTimeout(existing.timerId);
@@ -195,11 +193,15 @@ export class KeyboardHAL extends EventTarget {
       this._tapCounters.set(key.fn, { count: 1, timerId: null });
     }
     const entry = this._tapCounters.get(key.fn);
+
+    // Fire immediately — gives instant visual feedback on every tap
+    this.dispatchEvent(new CustomEvent('key:tap', {
+      detail: { key, tapCount: entry.count }
+    }));
+
+    // After the window expires with no further taps, clean up the counter
     entry.timerId = setTimeout(() => {
       this._tapCounters.delete(key.fn);
-      this.dispatchEvent(new CustomEvent('key:tap', {
-        detail: { key, tapCount: entry.count }
-      }));
     }, this.multiTapWindowMs);
   }
 
