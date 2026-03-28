@@ -163,6 +163,10 @@ DisplayHAL (ILI9341 320×240 landscape) ◄── LVGL WASM Phase 4
   <!-- ── Service Worker registration ───────────────────────── -->
   <script>
     if ('serviceWorker' in navigator) {
+      // Auto-reload when a new SW version takes control (deploy → instant update)
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        window.location.reload();
+      });
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js', { scope: './' })
           .then(reg => console.log('[SW] Registered, scope:', reg.scope))

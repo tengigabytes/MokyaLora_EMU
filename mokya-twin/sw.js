@@ -4,7 +4,7 @@
  * Web Serial API (USB) requires browser APIs, no network calls.
  */
 
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const CACHE_NAME    = `mokya-twin-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
@@ -52,12 +52,13 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: cache-first for local, network-first for CDN
+// Fetch: network-first for HTML, cache-first for everything else
 self.addEventListener('fetch', (event) => {
   const { url } = event.request;
+  const u = new URL(url);
 
   // External CDN (Tailwind etc.) — network-first, fall back to cache
-  if (url.includes('cdn.tailwindcss.com') || url.includes('fonts.googleapis.com')) {
+  if (u.hostname !== self.location.hostname) {
     event.respondWith(
       fetch(event.request)
         .then(res => {
@@ -70,7 +71,22 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Local assets — cache-first
+  // index.html / root — always network-first so deploys are visible immediately
+  const isHtml = u.pathname.endsWith('/') || u.pathname.endsWith('/index.html');
+  if (isHtml) {
+    event.respondWith(
+      fetch(event.request)
+        .then(res => {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+          return res;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // All other local assets — cache-first
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
