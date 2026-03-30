@@ -1,20 +1,46 @@
 /**
- * mie_wasm_api.h — Public WASM exports from mie_core.c
+ * mie_wasm_api.h — WASM exports from mie_core.wasm (mie_wasm_glue.cpp)
  *
- * These are the functions that MIE_Bridge.js calls after
- * WebAssembly.instantiate() succeeds (Phase 4).
+ * This header documents the functions exported by the compiled WASM module.
+ * Build: ./build_wasm.sh  →  mokya-twin/wasm/mie_core.wasm
  *
- * All functions are marked EMSCRIPTEN_KEEPALIVE so they survive
- * dead-code elimination.  In non-Emscripten builds (RP2350, unit tests)
- * these are just normal C function declarations.
+ * JS usage (from mie-hal.js after WebAssembly.instantiate):
  *
- * Naming convention: mie_<verb>[_<noun>]
- *
- * JS usage (from mie-hal.js):
- *   const { instance } = await WebAssembly.instantiate(buffer, imports);
+ *   const { instance } = await WebAssembly.instantiate(buffer, {
+ *     env: { emscripten_notify_memory_growth: () => {} },
+ *     wasi_snapshot_preview1: {},
+ *   });
  *   const wasm = instance.exports;
- *   wasm.mie_init();
- *   wasm.mie_process_key(row, col, MIE_KEY_TAP);
+ *   wasm._initialize();
+ *
+ *   // Load dictionary (MIED v2 format, two binary files)
+ *   wasm.mie_load_zh_dict(dat_ptr, dat_len, val_ptr, val_len); // 1=ok
+ *   wasm.mie_load_en_dict(dat_ptr, dat_len, val_ptr, val_len); // optional
+ *   wasm.mie_ctx_init();                                        // 1=ok
+ *
+ *   // Key events (pressed: 1=down, 0=up)
+ *   wasm.mie_key(row, col, pressed);  // non-zero = UI should redraw
+ *
+ *   // Poll committed text after each key event
+ *   const buf = wasm.malloc(256);
+ *   const n   = wasm.mie_pop_commit(buf, 256);  // bytes written, 0=none
+ *   if (n) { const text = readUtf8(wasm.memory, buf); }
+ *   wasm.free(buf);
+ *
+ *   // Read input display and candidates
+ *   readUtf8(wasm.memory, wasm.mie_input_ptr());   // e.g. "ㄅ˙"
+ *   readUtf8(wasm.memory, wasm.mie_mode_ptr());    // "中"/"EN"/"ABC"/"abc"/"ㄅ"
+ *   const n = wasm.mie_cand_count();
+ *   for (let i = 0; i < n; i++)
+ *     readUtf8(wasm.memory, wasm.mie_cand_word_ptr(i));
+ *
+ *   // Pagination
+ *   wasm.mie_sel();       // selected index on current page
+ *   wasm.mie_page_sz();   // candidates per page (fixed = 5)
+ *   wasm.mie_page_cnt();  // total pages
+ *
+ *   // Reset
+ *   wasm.mie_clear_state();
  */
 
 #ifndef MIE_WASM_API_H
@@ -34,91 +60,21 @@
 extern "C" {
 #endif
 
-/* ── Key event types (matches KeyboardHAL constants) ───────────── */
-#define MIE_KEY_DOWN  0
-#define MIE_KEY_UP    1
-#define MIE_KEY_TAP   2
-
-/* ── Max buffer sizes ────────────────────────────────────────────── */
-#define MIE_COMP_BUF_MAX   64    /* bytes for composition JSON */
-#define MIE_CAND_BUF_MAX  512    /* bytes for candidates JSON  */
-
-/**
- * mie_init — Initialise MIE engine.
- * Must be called once after WASM instantiation.
- * Internally calls mie_trie_init() and mie_timer_init().
- */
-MIE_EXPORT void mie_init(void);
-
-/**
- * mie_process_key — Main key event handler.
- *
- * @param row   keyboard matrix row   (0–5)
- * @param col   keyboard matrix column (0–5)
- * @param type  MIE_KEY_DOWN | MIE_KEY_UP | MIE_KEY_TAP
- *
- * Internally:
- *   - Routes to mie_handle_zhuyin_key(), mie_handle_english_key(), etc.
- *   - Fires emit_event(MIE_EVT_COMPOSITION_UPDATE, ...) after state change.
- */
-MIE_EXPORT void mie_process_key(uint8_t row, uint8_t col, uint8_t type);
-
-/**
- * mie_get_composition — Read current composition as JSON.
- *
- * Writes a null-terminated JSON string into buf, e.g.:
- *   {"buffer":["ㄅ","ㄚ"],"state":"FINAL","committed":"好"}
- *
- * @param buf  destination buffer (WASM linear memory pointer)
- * @param len  buffer capacity in bytes
- * @return     bytes written (not including null terminator), 0 on empty
- */
-MIE_EXPORT uint32_t mie_get_composition(uint8_t *buf, uint32_t len);
-
-/**
- * mie_get_candidates — Read current candidate list as JSON array.
- *
- * Writes a null-terminated JSON array, e.g.: ["巴","芭","疤"]
- *
- * @param buf  destination buffer
- * @param len  buffer capacity in bytes
- * @return     bytes written, 0 if no candidates
- */
-MIE_EXPORT uint32_t mie_get_candidates(uint8_t *buf, uint32_t len);
-
-/**
- * mie_select_candidate — Commit a candidate by index.
- *
- * @param idx  zero-based index into the current candidate list.
- *             No-op if idx is out of range.
- */
-MIE_EXPORT void mie_select_candidate(uint8_t idx);
-
-/**
- * mie_reset — Clear composition buffer and return to IDLE state.
- * Does not clear the committed text buffer.
- */
-MIE_EXPORT void mie_reset(void);
-
-/**
- * mie_tick — Advance internal timers.
- * Call periodically (every 10–20 ms) from the host event loop.
- * In JS: called from requestAnimationFrame loop via MIE_Bridge.tick().
- * On RP2350: driven by hardware alarm interrupts instead.
- */
-MIE_EXPORT void mie_tick(uint32_t now_ms);
-
-/**
- * mie_trie_load_blob — Load phonetic dictionary from a binary blob.
- *
- * @param ptr  pointer to blob in WASM linear memory
- * @param len  blob size in bytes
- * @return     number of trie nodes loaded, 0 on error
- *
- * The blob format is generated by tools/build-dict.py from zhuyin-full.json.
- * See docs/WASM_BUILD_GUIDE.md §Trie binary format.
- */
-MIE_EXPORT uint32_t mie_trie_load_blob(const uint8_t *ptr, uint32_t len);
+MIE_EXPORT int mie_load_zh_dict(const uint8_t* dat_buf, int dat_len,
+                                 const uint8_t* val_buf, int val_len);
+MIE_EXPORT int mie_load_en_dict(const uint8_t* dat_buf, int dat_len,
+                                 const uint8_t* val_buf, int val_len);
+MIE_EXPORT int         mie_ctx_init(void);
+MIE_EXPORT int         mie_key(uint8_t row, uint8_t col, int pressed);
+MIE_EXPORT int         mie_pop_commit(char* buf, int max_len);
+MIE_EXPORT const char* mie_input_ptr(void);
+MIE_EXPORT const char* mie_mode_ptr(void);
+MIE_EXPORT int         mie_cand_count(void);
+MIE_EXPORT const char* mie_cand_word_ptr(int idx);
+MIE_EXPORT int         mie_sel(void);
+MIE_EXPORT int         mie_page_sz(void);
+MIE_EXPORT int         mie_page_cnt(void);
+MIE_EXPORT void        mie_clear_state(void);
 
 #ifdef __cplusplus
 }

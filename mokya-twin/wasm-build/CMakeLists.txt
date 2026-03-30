@@ -1,9 +1,9 @@
-# CMakeLists_wasm.txt — Emscripten build for mie_core.wasm
+# CMakeLists.txt — Emscripten build for mie_core.wasm (mokya-twin/wasm-build/)
 #
 # Usage (from repo root after sourcing emsdk):
 #   source /path/to/emsdk/emsdk_env.sh
 #   emcmake cmake \
-#       -S mokya-twin/firmware-stubs \
+#       -S mokya-twin/wasm-build \
 #       -B build/wasm \
 #       -DMIE_SRC=MokyaLora/firmware/mie \
 #       -DCMAKE_BUILD_TYPE=Release
@@ -32,7 +32,7 @@ endif()
 
 # ── WASM glue + all firmware MIE sources ─────────────────────────────────────
 add_executable(mie_core
-  ${CMAKE_CURRENT_SOURCE_DIR}/mie_wasm_glue.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/../firmware-stubs/mie_wasm_glue.cpp
   ${MIE_SRC}/src/mie_init.cpp
   ${MIE_SRC}/src/trie_searcher.cpp
   ${MIE_SRC}/src/ime_logic.cpp
@@ -62,11 +62,12 @@ _mie_load_zh_dict,\
 _mie_load_en_dict,\
 _mie_ctx_init,\
 _mie_key,\
+_mie_pop_commit,\
 _mie_input_ptr,\
 _mie_mode_ptr,\
 _mie_cand_count,\
 _mie_cand_word_ptr,\
-_mie_page_sel,\
+_mie_sel,\
 _mie_page_sz,\
 _mie_page_cnt,\
 _mie_clear_state,\
@@ -94,6 +95,7 @@ set_target_properties(mie_core PROPERTIES SUFFIX ".wasm")
 
 # ── Post-build: copy to mokya-twin/wasm/ ─────────────────────────────────────
 set(WASM_OUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../wasm")
+file(MAKE_DIRECTORY "${WASM_OUT_DIR}")
 add_custom_command(TARGET mie_core POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E make_directory "${WASM_OUT_DIR}"
   COMMAND ${CMAKE_COMMAND} -E copy
