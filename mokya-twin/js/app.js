@@ -46,14 +46,21 @@ async function boot() {
 
   // ── 3. MIE Bridge ───────────────────────────────────────────────
   mie = new MIE_Bridge();
+
+  // Try WASM first (Phase 4); if it succeeds, load MIED binary dict.
+  // Falls back to JS impl + JSON dict if WASM is unavailable.
+  const wasmLoaded = await mie.loadWasm('./wasm/mie_core.wasm')
+    .then(() => true).catch(() => false);
+
   try {
-    await mie.loadDictionary('./data/zhuyin-mock.json');
+    if (wasmLoaded && mie.isWasmActive) {
+      await mie.loadDictionary('./data/dict_dat.bin', './data/dict_values.bin');
+    } else {
+      await mie.loadDictionary('./data/zhuyin-mock.json');
+    }
   } catch (err) {
     console.warn('[App] Dict load failed, continuing without:', err.message);
   }
-
-  // Try loading WASM (Phase 4 — silently fails in Phase 1)
-  mie.loadWasm('./wasm/mie_core.wasm').catch(() => {});
 
   updateSplash(60, 'Initialising serial bridge…');
 
