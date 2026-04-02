@@ -202,11 +202,11 @@ export class ChatScreen extends BaseScreen {
   }
 
   handleKeyTap({ key, tapCount }) {
-    // Navigation
-    if (key.fn === 'UP')   { this._scrollY = Math.max(0, this._scrollY - 30); return; }
-    if (key.fn === 'DOWN') { this._scrollY = Math.min(this._maxScroll, this._scrollY + 30); return; }
-    if (key.fn === 'RIGHT') { this.goto('map', 'slide_l'); return; }
-    // Forward everything else to MIE
+    // Only scroll with UP/DOWN when no active composition (buffer empty, no candidates)
+    const hasComp = this._compState.buffer.length > 0 || this._compState.candidates.length > 0;
+    if (key.fn === 'UP'   && !hasComp) { this._scrollY = Math.max(0, this._scrollY - 30); return; }
+    if (key.fn === 'DOWN' && !hasComp) { this._scrollY = Math.min(this._maxScroll, this._scrollY + 30); return; }
+    // Forward everything (including LEFT/RIGHT/UP/DOWN during composition) to MIE
     this.mie.processKeyTap({ key, tapCount });
   }
 

@@ -127,10 +127,11 @@ export class MIE_Bridge extends EventTarget {
   processKeyTap(keyEvent) {
     if (this._useWasm && this._wasm) {
       const { row, col } = keyEvent.key;
+      const [fRow, fCol] = this._toFirmwareKey(row, col);
       // Capture input string before the key so we can detect OK-with-empty-input
       const inputBefore = this._readWasmStr(this._wasm.mie_input_ptr());
-      this._wasm.mie_key(row, col, 1);
-      this._wasm.mie_key(row, col, 0);
+      this._wasm.mie_key(fRow, fCol, 1);
+      this._wasm.mie_key(fRow, fCol, 0);
       this._pollWasmState();
       // OK key (5,4) with no pending composition → emit action:enter to send message
       if (row === 5 && col === 4 && inputBefore === '') {
@@ -148,7 +149,8 @@ export class MIE_Bridge extends EventTarget {
    */
   processKeyDown(keyEvent) {
     if (this._useWasm && this._wasm) {
-      this._wasm.mie_key(keyEvent.key.row, keyEvent.key.col, 1);
+      const [fRow, fCol] = this._toFirmwareKey(keyEvent.key.row, keyEvent.key.col);
+      this._wasm.mie_key(fRow, fCol, 1);
       this._pollWasmState();
     } else {
       this._jsImpl.processKeyDown(keyEvent);
@@ -250,6 +252,24 @@ export class MIE_Bridge extends EventTarget {
   get isDictLoaded()   { return this._dictionaryLoaded; }
 
   // ── WASM internals ───────────────────────────────────────────
+
+  /**
+   * Translate EMU key coordinates to firmware key coordinates.
+   * The EMU keyboard-hal places nav keys in C5 column (R0–R1) and R5 row,
+   * but the firmware matrix assigns nav cluster at R5 C0–C4:
+   *   EMU (0,5) RIGHT → firmware (5,3)
+   *   EMU (1,5) DOWN  → firmware (5,1)
+   *   EMU (5,2) UP    → firmware (5,0)
+   *   EMU (5,3) LEFT  → firmware (5,2)
+   *   All other keys pass through unchanged.
+   */
+  _toFirmwareKey(row, col) {
+    if (row === 0 && col === 5) return [5, 3]; // RIGHT
+    if (row === 1 && col === 5) return [5, 1]; // DOWN
+    if (row === 5 && col === 2) return [5, 0]; // UP
+    if (row === 5 && col === 3) return [5, 2]; // LEFT
+    return [row, col];
+  }
 
   /**
    * Load MIED binary dictionaries into WASM linear memory.
