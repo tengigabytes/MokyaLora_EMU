@@ -40,6 +40,9 @@ export class MIE_Bridge extends EventTarget {
     /** TextDecoder for reading UTF-8 strings from WASM linear memory */
     this._dec = new TextDecoder();
 
+    /** Accumulated committed text (WASM mode); cleared on action:enter */
+    this._pendingCommitted = '';
+
     // Forward JS processor events to bridge consumers
     this._forwardEvents();
 
@@ -124,9 +127,16 @@ export class MIE_Bridge extends EventTarget {
   processKeyTap(keyEvent) {
     if (this._useWasm && this._wasm) {
       const { row, col } = keyEvent.key;
-      this._wasm.mie_key(row, col, 1); // pressed=1 (down)
-      this._wasm.mie_key(row, col, 0); // pressed=0 (up)
+      // Capture input string before the key so we can detect OK-with-empty-input
+      const inputBefore = this._readWasmStr(this._wasm.mie_input_ptr());
+      this._wasm.mie_key(row, col, 1);
+      this._wasm.mie_key(row, col, 0);
       this._pollWasmState();
+      // OK key (5,4) with no pending composition → emit action:enter to send message
+      if (row === 5 && col === 4 && inputBefore === '') {
+        this._emit('action:enter', { text: this._pendingCommitted });
+        this._pendingCommitted = '';
+      }
     } else {
       this._jsImpl.processKeyTap(keyEvent);
     }
@@ -204,11 +214,17 @@ export class MIE_Bridge extends EventTarget {
    */
   selectCandidate(idx) {
     if (this._useWasm && this._wasm) {
-      // In WASM mode, navigate to the right candidate then press OK
-      // The firmware handles selection via UP/DOWN + OK key.
-      // For direct index selection, use OK key (row=5, col=4) after
-      // navigating — or simply call processKeyTap for the OK key.
-      this._jsImpl.selectCandidateAt(idx);
+      // Navigate to the desired candidate using DOWN keys, then confirm with OK.
+      const cur = this._wasm.mie_sel();
+      const pageSize = this._wasm.mie_page_sz();
+      const steps = ((idx % pageSize) - cur + pageSize) % pageSize;
+      for (let i = 0; i < steps; i++) {
+        this._wasm.mie_key(5, 1, 1); // DOWN
+        this._wasm.mie_key(5, 1, 0);
+      }
+      this._wasm.mie_key(5, 4, 1); // OK
+      this._wasm.mie_key(5, 4, 0);
+      this._pollWasmState();
     } else {
       this._jsImpl.selectCandidateAt(idx);
     }
@@ -305,12 +321,13 @@ export class MIE_Bridge extends EventTarget {
   _pollWasmState() {
     const wasm = this._wasm;
 
-    // Check for committed text
+    // Drain committed text into _pendingCommitted and fire composition:commit
     const commitPtr = wasm.malloc(256);
-    const committed = wasm.mie_pop_commit(commitPtr, 256);
-    if (committed > 0) {
+    const n = wasm.mie_pop_commit(commitPtr, 256);
+    if (n > 0) {
       const text = this._readWasmStr(commitPtr);
       wasm.free(commitPtr);
+      this._pendingCommitted = (this._pendingCommitted ?? '') + text;
       this.dispatchEvent(new CustomEvent('composition:commit', { detail: { text } }));
     } else {
       wasm.free(commitPtr);
@@ -324,6 +341,7 @@ export class MIE_Bridge extends EventTarget {
       detail: {
         buffer:     inputStr,
         candidates,
+        committed:  this._pendingCommitted ?? '',
         mode:       modeStr,
         sel:        this.getPageSel(),
         pageCount:  this.getPageCount(),

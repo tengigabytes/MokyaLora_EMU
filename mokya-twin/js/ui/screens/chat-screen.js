@@ -37,8 +37,9 @@ export class ChatScreen extends BaseScreen {
   onEnter(from) {
     super.onEnter(from);
     // Subscribe to MIE events
-    this.mie.addEventListener('composition:update', this._onCompositionUpdate);
-    this.mie.addEventListener('action:enter',       this._onEnterAction);
+    this.mie.addEventListener('composition:update',  this._onCompositionUpdate);
+    this.mie.addEventListener('composition:commit',  this._onCompositionCommit);
+    this.mie.addEventListener('action:enter',        this._onEnterAction);
     // Subscribe to serial messages
     this.serial.addEventListener('serial:message',  this._onSerialMessage);
     this.serial.addEventListener('serial:sent',     this._onSerialSent);
@@ -50,24 +51,35 @@ export class ChatScreen extends BaseScreen {
   }
 
   onLeave(toScreen) {
-    this.mie.removeEventListener('composition:update', this._onCompositionUpdate);
-    this.mie.removeEventListener('action:enter',       this._onEnterAction);
+    this.mie.removeEventListener('composition:update',  this._onCompositionUpdate);
+    this.mie.removeEventListener('composition:commit',  this._onCompositionCommit);
+    this.mie.removeEventListener('action:enter',        this._onEnterAction);
     this.serial.removeEventListener('serial:message',  this._onSerialMessage);
     this.serial.removeEventListener('serial:sent',     this._onSerialSent);
   }
 
   // Bind as arrow functions so removeEventListener works
   _onCompositionUpdate = (e) => {
+    // buffer: string in WASM mode, array in JS mode — normalise to string
+    const rawBuf = e.detail.buffer ?? [];
     this._compState = {
-      buffer:     e.detail.buffer     ?? [],
+      buffer:     Array.isArray(rawBuf) ? rawBuf : rawBuf.split(''),
       candidates: e.detail.candidates ?? [],
-      selIdx:     this.mie._jsImpl?.candidateIdx ?? 0,
-      committed:  e.detail.committed  ?? '',
+      selIdx:     e.detail.sel ?? this.mie._jsImpl?.candidateIdx ?? 0,
+      committed:  e.detail.committed ?? '',
+    };
+  };
+
+  // WASM mode: each committed character arrives here; accumulate in compState
+  _onCompositionCommit = (e) => {
+    this._compState = {
+      ...this._compState,
+      committed: (this._compState.committed ?? '') + (e.detail.text ?? ''),
     };
   };
 
   _onEnterAction = (e) => {
-    const text = e.detail.text?.trim();
+    const text = (e.detail.text ?? '').trim();
     if (!text) return;
     const msg = {
       id:   Date.now(),
@@ -77,7 +89,8 @@ export class ChatScreen extends BaseScreen {
       sent: true,
     };
     this._messages.push(msg);
-    this._scrollY = 9999; // Scroll to bottom
+    this._scrollY = 9999;
+    this._compState.committed = '';
     this.serial.sendTextMessage(text);
   };
 

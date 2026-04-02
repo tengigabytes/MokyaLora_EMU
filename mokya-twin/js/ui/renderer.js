@@ -208,8 +208,9 @@ export class MokyaRenderer {
     this.ctx.fillText(modeLabel, 3, by + bh / 2);
 
     // Composition buffer (phonemes being typed)
-    if (buffer && buffer.length > 0) {
-      const bufStr = buffer.join('');
+    // buffer may be a string (WASM mode) or an array (JS mode)
+    const bufStr = Array.isArray(buffer) ? buffer.join('') : (buffer ?? '');
+    if (bufStr.length > 0) {
       this.ctx.font = this.F.ZH_MD;
       this.ctx.fillStyle = this.C.GREEN;
       this.ctx.fillText(bufStr, 18, by + bh / 2);
@@ -217,7 +218,7 @@ export class MokyaRenderer {
 
     // Candidates row
     if (candidates && candidates.length > 0) {
-      let cx = 18 + (buffer.length > 0 ? 24 : 0);
+      let cx = 18 + (bufStr.length > 0 ? 24 : 0);
       this.ctx.fillStyle = this.C.BORDER;
       this.ctx.fillRect(cx - 2, by + 2, 1, bh - 4);
       cx += 4;

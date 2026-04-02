@@ -49,11 +49,10 @@ async function boot() {
 
   // Try WASM first (Phase 4); if it succeeds, load MIED binary dict.
   // Falls back to JS impl + JSON dict if WASM is unavailable.
-  const wasmLoaded = await mie.loadWasm('./wasm/mie_core.wasm')
-    .then(() => true).catch(() => false);
+  await mie.loadWasm('./wasm/mie_core.wasm');
 
   try {
-    if (wasmLoaded && mie.isWasmActive) {
+    if (mie.isWasmActive) {
       await mie.loadDictionary('./data/dict_dat.bin', './data/dict_values.bin');
     } else {
       await mie.loadDictionary('./data/zhuyin-mock.json');
