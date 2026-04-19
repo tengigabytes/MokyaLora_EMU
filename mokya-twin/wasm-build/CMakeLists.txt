@@ -31,9 +31,10 @@ if(NOT DEFINED MIE_SRC)
 endif()
 
 # ── WASM glue + all firmware MIE sources ─────────────────────────────────────
+# mie_c_api.cpp is intentionally omitted — the WASM glue uses the C++ API
+# (mie::ImeLogic) directly so it can supply KeyEvent::now_ms and drive tick().
 add_executable(mie_core
   ${CMAKE_CURRENT_SOURCE_DIR}/../firmware-stubs/mie_wasm_glue.cpp
-  ${MIE_SRC}/src/mie_init.cpp
   ${MIE_SRC}/src/trie_searcher.cpp
   ${MIE_SRC}/src/ime_logic.cpp
   ${MIE_SRC}/src/ime_keys.cpp
@@ -42,7 +43,6 @@ add_executable(mie_core
   ${MIE_SRC}/src/ime_commit.cpp
   ${MIE_SRC}/src/ime_display.cpp
   ${MIE_SRC}/src/ime_direct.cpp
-  ${MIE_SRC}/src/mie_c_api.cpp
 )
 
 target_include_directories(mie_core PRIVATE
@@ -62,7 +62,10 @@ _mie_load_zh_dict,\
 _mie_load_en_dict,\
 _mie_ctx_init,\
 _mie_key,\
+_mie_tick,\
 _mie_pop_commit,\
+_mie_pop_delete_before,\
+_mie_pop_cursor_move,\
 _mie_input_ptr,\
 _mie_mode_ptr,\
 _mie_cand_count,\
@@ -74,6 +77,7 @@ _mie_cur_page,\
 _mie_page_cand_ptr,\
 _mie_page_cand_cnt,\
 _mie_clear_state,\
+_mie_set_text_context,\
 _malloc,\
 _free\
 ]"
