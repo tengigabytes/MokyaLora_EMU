@@ -90,6 +90,10 @@ export class MIE_Bridge extends EventTarget {
     /** setInterval handle driving mie_tick() */
     this._tickTimer = null;
 
+    /** Input pending state captured at press-edge, read at release-edge so
+     *  OK-with-empty-composition can fire action:enter. */
+    this._inputBeforePress = '';
+
     // Forward JS processor events to bridge consumers
     this._forwardEvents();
 
@@ -168,41 +172,45 @@ export class MIE_Bridge extends EventTarget {
   // ── Public API (stable across Phase 1–4) ────────────────────
 
   /**
-   * Process a key tap event.
-   * @param {{ key: {row:number, col:number}, tapCount: number }} keyEvent
-   */
-  processKeyTap(keyEvent) {
-    if (this._useWasm && this._wasm) {
-      const { row, col } = keyEvent.key;
-      const keycode = emuToKeycode(row, col);
-      const now = this._now();
-      // Capture pending buffer before the key so we can detect OK-with-empty.
-      const inputBefore = this._readWasmStr(this._wasm.mie_input_ptr());
-      this._wasm.mie_key(keycode, 1, now);
-      this._wasm.mie_key(keycode, 0, now + 1);
-      this._pollWasmState();
-      // OK with no pending composition → send the accumulated committed text
-      if (keycode === KEYCODE.OK && inputBefore === '') {
-        this._emit('action:enter', { text: this._pendingCommitted });
-        this._pendingCommitted = '';
-      }
-    } else {
-      this._jsImpl.processKeyTap(keyEvent);
-    }
-  }
-
-  /**
-   * Process immediate key-down (for navigation feedback).
+   * Process key-down (press edge). Fires once per physical press.
+   * KeyboardHAL emits key:down on keydown and key:tap on keyup, so we
+   * map them to the two ImeLogic edges: press here, release in
+   * processKeyTap. Doing both edges in processKeyTap AND another press
+   * in processKeyDown would double-trigger every input.
    * @param {{ key: {row:number, col:number} }} keyEvent
    */
   processKeyDown(keyEvent) {
     if (this._useWasm && this._wasm) {
       const { row, col } = keyEvent.key;
       const keycode = emuToKeycode(row, col);
+      // Capture pending buffer before the press so the release edge can
+      // detect OK-with-empty-composition.
+      this._inputBeforePress = this._readWasmStr(this._wasm.mie_input_ptr());
       this._wasm.mie_key(keycode, 1, this._now());
       this._pollWasmState();
     } else {
       this._jsImpl.processKeyDown(keyEvent);
+    }
+  }
+
+  /**
+   * Process key-up (release edge).
+   * @param {{ key: {row:number, col:number}, tapCount: number }} keyEvent
+   */
+  processKeyTap(keyEvent) {
+    if (this._useWasm && this._wasm) {
+      const { row, col } = keyEvent.key;
+      const keycode = emuToKeycode(row, col);
+      this._wasm.mie_key(keycode, 0, this._now());
+      this._pollWasmState();
+      // OK with no pending composition → send accumulated committed text.
+      if (keycode === KEYCODE.OK && this._inputBeforePress === '') {
+        this._emit('action:enter', { text: this._pendingCommitted });
+        this._pendingCommitted = '';
+      }
+      this._inputBeforePress = '';
+    } else {
+      this._jsImpl.processKeyTap(keyEvent);
     }
   }
 
