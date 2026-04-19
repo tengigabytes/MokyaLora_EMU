@@ -26,46 +26,7 @@
 import { MIE_Processor, InputMode } from '../core/mie-processor.js';
 import { MIE_Trie }                 from '../core/mie-trie.js';
 import { MIE_Timer }                from '../core/mie-timer.js';
-
-// Firmware keycode constants — mirrors firmware/mie/include/mie/keycode.h.
-// The canonical value for any 6×6 matrix key is row*6 + col + 1; these
-// named constants exist for the non-row-major remaps and for readability.
-const KEYCODE = {
-  NONE:    0x00,
-  FUNC:    0x06,
-  SET:     0x0C,
-  BACK:    0x12,
-  DEL:     0x18,
-  MODE:    0x19,
-  TAB:     0x1A,
-  SPACE:   0x1B,
-  SYM1:    0x1C,
-  SYM2:    0x1D,
-  VOL_UP:  0x1E,
-  UP:      0x1F,
-  DOWN:    0x20,
-  LEFT:    0x21,
-  RIGHT:   0x22,
-  OK:      0x23,
-  VOL_DOWN:0x24,
-};
-
-/**
- * Translate EMU visual-keyboard (row, col) to the firmware's semantic keycode.
- *
- * The EMU places D-pad keys in a different grid position than the firmware's
- * row-major enumeration: RIGHT/DOWN appear in column 5 of rows 0–1, and
- * UP/LEFT appear in row 5 columns 2–3. Everything else is row-major.
- */
-function emuToKeycode(row, col) {
-  if (row === 0 && col === 5) return KEYCODE.RIGHT;
-  if (row === 1 && col === 5) return KEYCODE.DOWN;
-  if (row === 5 && col === 0) return KEYCODE.FUNC;
-  if (row === 5 && col === 1) return KEYCODE.BACK;
-  if (row === 5 && col === 2) return KEYCODE.UP;
-  if (row === 5 && col === 3) return KEYCODE.LEFT;
-  return row * 6 + col + 1;
-}
+import { KEYCODE }                  from './keyboard-hal.js';
 
 export class MIE_Bridge extends EventTarget {
   constructor() {
@@ -177,12 +138,16 @@ export class MIE_Bridge extends EventTarget {
    * map them to the two ImeLogic edges: press here, release in
    * processKeyTap. Doing both edges in processKeyTap AND another press
    * in processKeyDown would double-trigger every input.
-   * @param {{ key: {row:number, col:number} }} keyEvent
+   *
+   * keyEvent.key.keycode is the canonical firmware MOKYA_KEY_* value
+   * (set by keyboard-hal.js); USB Control / serial injection paths can
+   * synthesise events with the same keycode field and reuse this entry.
+   *
+   * @param {{ key: { keycode: number } }} keyEvent
    */
   processKeyDown(keyEvent) {
     if (this._useWasm && this._wasm) {
-      const { row, col } = keyEvent.key;
-      const keycode = emuToKeycode(row, col);
+      const keycode = keyEvent.key.keycode;
       // Capture pending buffer before the press so the release edge can
       // detect OK-with-empty-composition.
       this._inputBeforePress = this._readWasmStr(this._wasm.mie_input_ptr());
@@ -195,12 +160,11 @@ export class MIE_Bridge extends EventTarget {
 
   /**
    * Process key-up (release edge).
-   * @param {{ key: {row:number, col:number}, tapCount: number }} keyEvent
+   * @param {{ key: { keycode: number }, tapCount: number }} keyEvent
    */
   processKeyTap(keyEvent) {
     if (this._useWasm && this._wasm) {
-      const { row, col } = keyEvent.key;
-      const keycode = emuToKeycode(row, col);
+      const keycode = keyEvent.key.keycode;
       this._wasm.mie_key(keycode, 0, this._now());
       this._pollWasmState();
       // OK with no pending composition → send accumulated committed text.
