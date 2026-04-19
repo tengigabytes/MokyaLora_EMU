@@ -86,9 +86,12 @@ _malloc,\
 _free\
 ]"
 
-  # Memory: 2 MB initial, 16 MB max (dict data + trie structures)
-  -sINITIAL_MEMORY=2097152
-  -sMAXIMUM_MEMORY=16777216
+  # Memory: 4 MB initial, 64 MB max. The MIED v2 binaries live in WASM
+  # linear memory for the lifetime of the context, and a full libchewing
+  # dict with --zh-max-abbr-syls 4 / --zh-min-freq 30 currently weighs
+  # ~22 MB — leave headroom for trie state and allocation churn.
+  -sINITIAL_MEMORY=4194304
+  -sMAXIMUM_MEMORY=67108864
   -sALLOW_MEMORY_GROWTH=1
 )
 

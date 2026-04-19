@@ -49,16 +49,25 @@ async function boot() {
 
   // Try WASM first (Phase 4); if it succeeds, load MIED binary dict.
   // Falls back to JS impl + JSON dict if WASM is unavailable.
-  await mie.loadWasm('./wasm/mie_core.wasm');
+  //
+  // Cache-bust on every asset tied to the IME build — the WASM binary and
+  // MIED dict files are re-generated together, but the browser's HTTP
+  // cache is aggressive on .wasm / .bin and can serve stale bytes even
+  // after the Service Worker cache is evicted. Bump MIE_ASSET_VER in
+  // lockstep with sw.js CACHE_VERSION whenever any dict or wasm asset is
+  // rebuilt so the query string changes.
+  const MIE_ASSET_VER = 'v16';
+  const v = `?v=${MIE_ASSET_VER}`;
+  await mie.loadWasm(`./wasm/mie_core.wasm${v}`);
 
   try {
     if (mie.isWasmActive) {
       await mie.loadDictionary(
-        './data/dict_dat.bin', './data/dict_values.bin',
-        './data/en_dat.bin',   './data/en_values.bin',
+        `./data/dict_dat.bin${v}`,    `./data/dict_values.bin${v}`,
+        `./data/en_dat.bin${v}`,      `./data/en_values.bin${v}`,
       );
     } else {
-      await mie.loadDictionary('./data/zhuyin-mock.json');
+      await mie.loadDictionary(`./data/zhuyin-mock.json${v}`);
     }
   } catch (err) {
     console.warn('[App] Dict load failed, continuing without:', err.message);
