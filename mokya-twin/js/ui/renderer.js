@@ -322,12 +322,23 @@ export class MokyaRenderer {
 
   _drawCandRow(state, y, h) {
     const midY  = y + h / 2;
-    const TAG_W = 26;
+    const TAG_W = 30;
 
+    // Mode chip (replaces the 候選 label; shows the active IME mode so the
+    // user can tell SmartZh / SmartEn / Direct apart at a glance).
+    const modeStr = state.mode || '';
     this.ctx.font        = this.F.XS;
-    this.ctx.fillStyle   = this.C.TEXT_DIM;
     this.ctx.textBaseline = 'middle';
-    this.ctx.fillText('候選', 2, midY);
+    if (modeStr) {
+      const w = this.ctx.measureText(modeStr).width + 8;
+      const cx = 2, cy = y + 3;
+      this.ctx.fillStyle = this.C.GREEN;
+      this.ctx.fillRect(cx, cy, w, h - 6);
+      this.ctx.fillStyle = '#0A0A0A';
+      this.ctx.textAlign = 'center';
+      this.ctx.fillText(modeStr, cx + w / 2, midY);
+      this.ctx.textAlign = 'left';
+    }
 
     this.ctx.fillStyle = this.C.BORDER;
     this.ctx.fillRect(TAG_W, y + 3, 1, h - 6);

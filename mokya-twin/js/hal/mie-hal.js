@@ -189,7 +189,7 @@ export class MIE_Bridge extends EventTarget {
     return this._jsImpl.inputText ?? '';
   }
 
-  /** Get current mode indicator ("中"/"EN"/"ABC"/"abc"/"ㄅ"). */
+  /** Get current mode indicator: "中" (SmartZh), "EN" (SmartEn), or "ABC" (Direct). */
   getModeStr() {
     if (this._useWasm && this._wasm) {
       return this._readWasmStr(this._wasm.mie_mode_ptr());

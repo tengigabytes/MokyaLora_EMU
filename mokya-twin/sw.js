@@ -4,7 +4,7 @@
  * Web Serial API (USB) requires browser APIs, no network calls.
  */
 
-const CACHE_VERSION = 'v13';
+const CACHE_VERSION = 'v14';
 const CACHE_NAME    = `mokya-twin-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [

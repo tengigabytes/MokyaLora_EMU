@@ -29,7 +29,7 @@
  *
  *   // Read input display and candidates
  *   readUtf8(wasm.memory, wasm.mie_input_ptr());   // e.g. "ㄅ˙"
- *   readUtf8(wasm.memory, wasm.mie_mode_ptr());    // "中"/"EN"/"ABC"/"abc"/"ㄅ"
+ *   readUtf8(wasm.memory, wasm.mie_mode_ptr());    // "中" / "EN" / "ABC"
  *   const n = wasm.mie_cand_count();
  *   for (let i = 0; i < n; i++)
  *     readUtf8(wasm.memory, wasm.mie_cand_word_ptr(i));

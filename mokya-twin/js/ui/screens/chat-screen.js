@@ -182,6 +182,7 @@ export class ChatScreen extends BaseScreen {
         allCandidates:  this._compState.allCandidates,
         selectedAbs:    this._compState.selectedAbs,
         selIdx:         this._compState.selIdx,
+        mode:           this.mie.currentMode,
         cursorBlink:    Math.floor(now / 500) % 2 === 0,
       });
     }
