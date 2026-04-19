@@ -207,6 +207,9 @@ export class MIE_Bridge extends EventTarget {
       if (keycode === KEYCODE.OK && this._inputBeforePress === '') {
         this._emit('action:enter', { text: this._pendingCommitted });
         this._pendingCommitted = '';
+        // Resync firmware: next message starts a fresh sentence (cap first
+        // word, no leading space).
+        this.setTextContext('');
       }
       this._inputBeforePress = '';
     } else {
@@ -345,6 +348,37 @@ export class MIE_Bridge extends EventTarget {
     }
   }
 
+  /**
+   * Sync the firmware's SmartEn sentence-aware state with the host text.
+   * Pass the last 1–2 codepoints immediately before the cursor (or '' to
+   * mark a fresh sentence). Firmware uses this to decide whether the
+   * next commit gets a leading space and whether it should be capitalised.
+   *
+   * Call after any external edit to the committed buffer — message sent,
+   * DEL that pops a char, paste, cursor moves — so firmware's tracked
+   * state matches reality.
+   */
+  setTextContext(prevUtf8) {
+    if (!this._useWasm || !this._wasm) return;
+    const enc = new TextEncoder();
+    const bytes = enc.encode(prevUtf8 ?? '');
+    const ptr = this._wasm.malloc(bytes.length + 1);
+    new Uint8Array(this._wasm.memory.buffer, ptr, bytes.length).set(bytes);
+    new Uint8Array(this._wasm.memory.buffer, ptr + bytes.length, 1)[0] = 0;
+    this._wasm.mie_set_text_context(ptr);
+    this._wasm.free(ptr);
+  }
+
+  /**
+   * Return the last `n` codepoints (default 2) of `s` as a UTF-16 string.
+   * Walks codepoints — safe for surrogate pairs (emoji) and CJK.
+   */
+  static lastCodepoints(s, n = 2) {
+    if (!s) return '';
+    const cps = Array.from(s);
+    return cps.slice(-n).join('');
+  }
+
   /** Cycle through input modes (JS mode only; WASM uses MODE key). */
   cycleMode() {
     if (!this._useWasm) this._jsImpl._cycleMode();
@@ -466,6 +500,9 @@ export class MIE_Bridge extends EventTarget {
         // Pop the last full codepoint to stay UTF-16-safe
         this._pendingCommitted = Array.from(this._pendingCommitted).slice(0, -1).join('');
       }
+      // Resync firmware's SmartEn state with the new trailing chars so
+      // auto-cap / leading-space decisions match reality.
+      this.setTextContext(MIE_Bridge.lastCodepoints(this._pendingCommitted, 2));
       this.dispatchEvent(new CustomEvent('action:delete', {
         detail: { committed: this._pendingCommitted ?? '' }
       }));
