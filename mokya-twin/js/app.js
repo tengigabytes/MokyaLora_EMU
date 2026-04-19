@@ -53,7 +53,10 @@ async function boot() {
 
   try {
     if (mie.isWasmActive) {
-      await mie.loadDictionary('./data/dict_dat.bin', './data/dict_values.bin');
+      await mie.loadDictionary(
+        './data/dict_dat.bin', './data/dict_values.bin',
+        './data/en_dat.bin',   './data/en_values.bin',
+      );
     } else {
       await mie.loadDictionary('./data/zhuyin-mock.json');
     }
