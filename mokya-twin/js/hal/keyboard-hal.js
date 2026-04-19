@@ -98,7 +98,7 @@ export const KEY_MATRIX = [
   { idx: 24, row:4, col:0, keycode:KEYCODE.MODE,  label:'MODE',                               fn:'MODE',  chars:[],               keyCode:'Tab',       cat:'mode'   },
   { idx: 25, row:4, col:1, keycode:KEYCODE.TAB,   label:'TAB',                                fn:'TAB',   chars:['\t'],           keyCode:'Backquote', cat:'func'   },
   { idx: 26, row:4, col:2, keycode:KEYCODE.SPACE, label:'SPC',                                fn:'SPACE', chars:[' '],            keyCode:'Space',     cat:'space'  },
-  { idx: 27, row:4, col:3, keycode:KEYCODE.SYM1,  label:'SYM',                                fn:'SYM',   chars:['，'],            keyCode:'Comma',     cat:'func'   },
+  { idx: 27, row:4, col:3, keycode:KEYCODE.SYM1,  label:'SYM',   label2:'，',                 fn:'SYM',   chars:['，'],            keyCode:'Comma',     cat:'func'   },
   { idx: 28, row:4, col:4, keycode:KEYCODE.SYM2,  label:'。.？',                             fn:'PUNCT', chars:['。','.','？'],  keyCode:'Period',    cat:'func'   },
   { idx: 29, row:4, col:5, keycode:KEYCODE.VOL_UP, label:'VOL+',                              fn:'VOLUP', chars:[],               keyCode:'Equal',     cat:'vol'    },
 
