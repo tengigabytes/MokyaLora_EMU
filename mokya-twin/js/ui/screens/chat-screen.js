@@ -27,7 +27,14 @@ export class ChatScreen extends BaseScreen {
     this._messages = [...INITIAL_MESSAGES];
     this._scrollY  = 0;
     this._maxScroll = 0;
-    this._compState = { buffer: [], candidates: [], selIdx: 0, committed: '' };
+    this._compState = {
+      pending:    { str: '', matchedPrefixBytes: 0, style: 0 },
+      candidates: [],
+      selIdx:     0,
+      page:       0,
+      pageCount:  0,
+      committed:  '',
+    };
     this._showComp  = true;
     // Fake RSSI waveform data (circular buffer, 40 points)
     this._rssiHistory = Array.from({ length: 40 }, () => -(70 + Math.random() * 40));
@@ -60,13 +67,20 @@ export class ChatScreen extends BaseScreen {
 
   // Bind as arrow functions so removeEventListener works
   _onCompositionUpdate = (e) => {
-    // buffer: string in WASM mode, array in JS mode — normalise to string
-    const rawBuf = e.detail.buffer ?? [];
+    const d = e.detail;
+    const rawBuf = d.buffer ?? '';
+    const pending = d.pending ?? {
+      str:                Array.isArray(rawBuf) ? rawBuf.join('') : rawBuf,
+      matchedPrefixBytes: 0,
+      style:              rawBuf && rawBuf.length ? 1 : 0,
+    };
     this._compState = {
-      buffer:     Array.isArray(rawBuf) ? rawBuf : rawBuf.split(''),
-      candidates: e.detail.candidates ?? [],
-      selIdx:     e.detail.sel ?? this.mie._jsImpl?.candidateIdx ?? 0,
-      committed:  e.detail.committed ?? '',
+      pending,
+      candidates: d.candidates ?? [],
+      selIdx:     d.sel ?? this.mie._jsImpl?.candidateIdx ?? 0,
+      page:       d.page ?? 0,
+      pageCount:  d.pageCount ?? 0,
+      committed:  d.committed ?? '',
     };
   };
 
@@ -113,9 +127,9 @@ export class ChatScreen extends BaseScreen {
     const r = this.r;
     const CONTENT_TOP = 18;
     const TAB_H       = 22;
-    const COMP_H      = this._showComp ? 28 : 0;
-    const PREVIEW_H   = 16;
-    const CONTENT_BTM = r.H - TAB_H - COMP_H - PREVIEW_H;
+    // Composition block = 文字 row (22) + 候選 row (22) = 44 when shown.
+    const COMP_H      = this._showComp ? 44 : 0;
+    const CONTENT_BTM = r.H - TAB_H - COMP_H;
     const CONTENT_H   = CONTENT_BTM - CONTENT_TOP;
 
     // Background
@@ -158,27 +172,19 @@ export class ChatScreen extends BaseScreen {
       r.ctx.fillRect(r.W - 3, indY, 2, indH);
     }
 
-    // ── Input preview bar ────────────────────────────────────────
-    const prevY = CONTENT_BTM;
-    r.d.fillRect(0, prevY, r.W, PREVIEW_H, '#0E0E10');
-    r.d.fillRect(0, prevY, r.W, 1, r.C.BORDER);
-    const inputText = this.mie.inputText;
-    r.ctx.font = r.F.ZH_SM;
-    r.ctx.fillStyle = r.C.TEXT;
-    r.ctx.textBaseline = 'middle';
-    // Cursor blink
-    const cursor = Math.floor(now / 500) % 2 === 0 ? '▋' : '';
-    r.ctx.fillText((inputText || '輸入…') + cursor, 6, prevY + PREVIEW_H / 2);
-    r.ctx.textBaseline = 'alphabetic';
-
-    // ── Composition bar ──────────────────────────────────────────
+    // ── Composition bar (文字 row + 候選 row, REPL-style) ───────
     if (this._showComp) {
+      // Twin does not track cursor position inside the committed buffer
+      // yet, so pending is always inline at the end.
       r.drawCompositionBar({
-        committed:  this._compState.committed,
-        buffer:     this._compState.buffer,
-        candidates: this._compState.candidates,
-        selIdx:     this._compState.selIdx,
-        mode:       this.mie.currentMode,
+        committedLeft:  this._compState.committed,
+        committedRight: '',
+        pending:        this._compState.pending,
+        candidates:     this._compState.candidates,
+        selIdx:         this._compState.selIdx,
+        page:           this._compState.page,
+        pageCount:      this._compState.pageCount,
+        cursorBlink:    Math.floor(now / 500) % 2 === 0,
       });
     }
 
@@ -203,7 +209,8 @@ export class ChatScreen extends BaseScreen {
 
   handleKeyTap({ key, tapCount }) {
     // Only scroll with UP/DOWN when no active composition (buffer empty, no candidates)
-    const hasComp = this._compState.buffer.length > 0 || this._compState.candidates.length > 0;
+    const pendingLen = (this._compState.pending?.str ?? '').length;
+    const hasComp = pendingLen > 0 || this._compState.candidates.length > 0;
     if (key.fn === 'UP'   && !hasComp) { this._scrollY = Math.max(0, this._scrollY - 30); return; }
     if (key.fn === 'DOWN' && !hasComp) { this._scrollY = Math.min(this._maxScroll, this._scrollY + 30); return; }
     // Forward everything (including LEFT/RIGHT/UP/DOWN during composition) to MIE

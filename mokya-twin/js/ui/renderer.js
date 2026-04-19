@@ -192,53 +192,210 @@ export class MokyaRenderer {
    * @param {number}   selIdx     selected candidate index
    * @param {string}   mode       input mode label
    */
-  drawCompositionBar({ committed, buffer, candidates, selIdx, mode }) {
-    const bh = 28, by = this.H - 22 - bh;
-    // Background
+  /**
+   * Two-row MIE display matching firmware mie_repl.cpp layout:
+   *   Row 1 "文字" — committed-left + styled pending + cursor block + committed-right
+   *   Row 2 "候選" — paginated candidates with [page/total] indicator
+   *
+   * @param {{
+   *   committedLeft:  string,
+   *   committedRight: string,
+   *   pending:        { str: string, matchedPrefixBytes: number, style: number },
+   *   candidates:     string[],
+   *   selIdx:         number,
+   *   page:           number,
+   *   pageCount:      number,
+   *   cursorBlink:    boolean,
+   * }} state
+   */
+  drawCompositionBar(state) {
+    const TEXT_H = 22;
+    const CAND_H = 22;
+    const BAR_Y  = this.H - 22 /* tab bar */ - TEXT_H - CAND_H;
+
+    // ── Backdrop ───────────────────────────────────────────────────
     this.ctx.fillStyle = '#161618';
-    this.ctx.fillRect(0, by, this.W, bh);
+    this.ctx.fillRect(0, BAR_Y, this.W, TEXT_H + CAND_H);
     this.ctx.fillStyle = this.C.BORDER;
-    this.ctx.fillRect(0, by, this.W, 1);
+    this.ctx.fillRect(0, BAR_Y, this.W, 1);
+    this.ctx.fillRect(0, BAR_Y + TEXT_H, this.W, 1);
 
-    // Mode indicator
-    this.ctx.font = this.F.XS;
-    this.ctx.fillStyle = this.C.TEXT_MUTED;
-    this.ctx.textBaseline = 'middle';
-    const modeLabel = { ZHUYIN:'注', ENGLISH:'EN', NUMERIC:'123', SYMBOL:'符' }[mode] ?? mode;
-    this.ctx.fillText(modeLabel, 3, by + bh / 2);
+    // ── Row 1: 文字 ─────────────────────────────────────────────────
+    this._drawTextRow(state, BAR_Y, TEXT_H);
 
-    // Composition buffer (phonemes being typed)
-    // buffer may be a string (WASM mode) or an array (JS mode)
-    const bufStr = Array.isArray(buffer) ? buffer.join('') : (buffer ?? '');
-    if (bufStr.length > 0) {
-      this.ctx.font = this.F.ZH_MD;
-      this.ctx.fillStyle = this.C.GREEN;
-      this.ctx.fillText(bufStr, 18, by + bh / 2);
-    }
+    // ── Row 2: 候選 ─────────────────────────────────────────────────
+    this._drawCandRow(state, BAR_Y + TEXT_H, CAND_H);
 
-    // Candidates row
-    if (candidates && candidates.length > 0) {
-      let cx = 18 + (bufStr.length > 0 ? 24 : 0);
-      this.ctx.fillStyle = this.C.BORDER;
-      this.ctx.fillRect(cx - 2, by + 2, 1, bh - 4);
-      cx += 4;
-
-      candidates.slice(0, 8).forEach((c, i) => {
-        const isSelected = i === selIdx;
-        if (isSelected) {
-          this.ctx.fillStyle = this.C.GREEN_MUTED;
-          this.ctx.fillRect(cx - 1, by + 2, 14, bh - 4);
-        }
-        this.ctx.font = this.F.ZH_MD;
-        this.ctx.fillStyle = isSelected ? this.C.GREEN : this.C.TEXT;
-        this.ctx.textBaseline = 'middle';
-        this.ctx.fillText(c, cx + 1, by + bh / 2);
-        cx += 16;
-      });
-    }
-
-    this.ctx.textAlign = 'left';
+    this.ctx.textAlign   = 'left';
     this.ctx.textBaseline = 'alphabetic';
+  }
+
+  _drawTextRow({ committedLeft, committedRight, pending, cursorBlink }, y, h) {
+    const midY   = y + h / 2;
+    const labelX = 2;
+    const TAG_W  = 26;  // "文字" label column width
+
+    // Label gutter "文字"
+    this.ctx.font        = this.F.XS;
+    this.ctx.fillStyle   = this.C.TEXT_DIM;
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText('文字', labelX, midY);
+
+    // Vertical separator
+    this.ctx.fillStyle = this.C.BORDER;
+    this.ctx.fillRect(TAG_W, y + 3, 1, h - 6);
+
+    // Text content
+    const startX = TAG_W + 5;
+    let x = startX;
+    this.ctx.font = this.F.ZH_MD;
+
+    // ── committed-left (normal) ──
+    this.ctx.fillStyle = this.C.TEXT;
+    if (committedLeft) {
+      this.ctx.fillText(committedLeft, x, midY);
+      x += this.ctx.measureText(committedLeft).width;
+    }
+
+    // ── pending (styled) ──
+    const pv = pending ?? { str: '', matchedPrefixBytes: 0, style: 0 };
+    const pendingStr = pv.str ?? '';
+    if (pendingStr.length > 0) {
+      const w = this.ctx.measureText(pendingStr).width;
+      if (pv.style === 2 /* Inverted */) {
+        // Reverse-video: green fill, background-color text
+        this.ctx.fillStyle = this.C.GREEN;
+        this.ctx.fillRect(x - 1, y + 3, w + 2, h - 6);
+        this.ctx.fillStyle = '#0A0A0A';
+        this.ctx.fillText(pendingStr, x, midY);
+      } else if (pv.style === 1 /* PrefixBold */) {
+        // Underline the whole pending; bold the matched prefix.
+        const mp = pv.matchedPrefixBytes | 0;
+        const prefixStr = mp > 0 ? this._utf8Slice(pendingStr, 0, mp) : '';
+        const restStr   = mp > 0 ? this._utf8Slice(pendingStr, mp)    : pendingStr;
+
+        // Prefix: bold green
+        if (prefixStr) {
+          this.ctx.font = 'bold ' + this.F.ZH_MD;
+          this.ctx.fillStyle = this.C.GREEN;
+          this.ctx.fillText(prefixStr, x, midY);
+          const pw = this.ctx.measureText(prefixStr).width;
+          this._underline(x, y + h - 4, pw);
+          x += pw;
+          this.ctx.font = this.F.ZH_MD;
+        }
+        // Rest: normal green
+        if (restStr) {
+          this.ctx.fillStyle = this.C.GREEN_DIM;
+          this.ctx.fillText(restStr, x, midY);
+          const rw = this.ctx.measureText(restStr).width;
+          this._underline(x, y + h - 4, rw);
+          x += rw;
+        }
+      } else {
+        // None
+        this.ctx.fillStyle = this.C.GREEN;
+        this.ctx.fillText(pendingStr, x, midY);
+        x += w;
+      }
+    }
+
+    // ── cursor block (reverse-video) ──
+    const curW = 2;
+    if (cursorBlink !== false) {
+      this.ctx.fillStyle = this.C.GREEN;
+      this.ctx.fillRect(x, y + 4, curW, h - 8);
+    }
+    x += curW + 1;
+
+    // ── committed-right (normal) ──
+    if (committedRight) {
+      this.ctx.fillStyle = this.C.TEXT;
+      this.ctx.font = this.F.ZH_MD;
+      this.ctx.fillText(committedRight, x, midY);
+    }
+  }
+
+  _drawCandRow({ candidates, selIdx, page, pageCount }, y, h) {
+    const midY = y + h / 2;
+    const TAG_W = 26;
+
+    this.ctx.font       = this.F.XS;
+    this.ctx.fillStyle  = this.C.TEXT_DIM;
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText('候選', 2, midY);
+
+    this.ctx.fillStyle = this.C.BORDER;
+    this.ctx.fillRect(TAG_W, y + 3, 1, h - 6);
+
+    this.ctx.font = this.F.ZH_MD;
+
+    if (!candidates || candidates.length === 0) {
+      this.ctx.fillStyle = this.C.TEXT_MUTED;
+      this.ctx.fillText('(按鍵開始輸入)', TAG_W + 5, midY);
+      return;
+    }
+
+    // Reserve room on the right for page indicator
+    const pageStr = (pageCount > 1) ? `[${(page | 0) + 1}/${pageCount | 0}]` : '';
+    let rightReserve = 0;
+    if (pageStr) {
+      this.ctx.font = this.F.XS;
+      rightReserve = this.ctx.measureText(pageStr).width + 6;
+      this.ctx.font = this.F.ZH_MD;
+    }
+
+    let x = TAG_W + 5;
+    const limitX = this.W - rightReserve - 2;
+    candidates.forEach((c, i) => {
+      if (x >= limitX) return;
+      const num = `${i + 1}.`;
+      const numW = this._measureWith(this.F.XS, num);
+      const candW = this.ctx.measureText(c).width;
+      const slotW = numW + candW + 6;
+      const sel = (i === selIdx);
+      if (sel) {
+        this.ctx.fillStyle = this.C.GREEN_MUTED;
+        this.ctx.fillRect(x - 1, y + 3, slotW, h - 6);
+      }
+      // Number
+      this.ctx.font = this.F.XS;
+      this.ctx.fillStyle = sel ? this.C.GREEN : this.C.TEXT_DIM;
+      this.ctx.fillText(num, x, midY);
+      // Word
+      this.ctx.font = this.F.ZH_MD;
+      this.ctx.fillStyle = sel ? this.C.GREEN : this.C.TEXT;
+      this.ctx.fillText(c, x + numW + 1, midY);
+      x += slotW;
+    });
+
+    if (pageStr) {
+      this.ctx.font = this.F.XS;
+      this.ctx.fillStyle = this.C.TEXT_DIM;
+      this.ctx.textAlign = 'right';
+      this.ctx.fillText(pageStr, this.W - 3, midY);
+      this.ctx.textAlign = 'left';
+    }
+  }
+
+  _underline(x, y, w) {
+    this.ctx.fillStyle = this.C.GREEN_DIM;
+    this.ctx.fillRect(x, y, w, 1);
+  }
+
+  _measureWith(font, text) {
+    const prev = this.ctx.font;
+    this.ctx.font = font;
+    const w = this.ctx.measureText(text).width;
+    this.ctx.font = prev;
+    return w;
+  }
+
+  /** Slice a UTF-8 string by *byte* offsets, returning a JS substring. */
+  _utf8Slice(str, startByte, endByte) {
+    const bytes = new TextEncoder().encode(str);
+    const slice = bytes.subarray(startByte, endByte ?? bytes.length);
+    return new TextDecoder().decode(slice);
   }
 
   // ── Card / Container ─────────────────────────────────────────

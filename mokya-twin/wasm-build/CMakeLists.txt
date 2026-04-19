@@ -67,6 +67,9 @@ _mie_pop_commit,\
 _mie_pop_delete_before,\
 _mie_pop_cursor_move,\
 _mie_input_ptr,\
+_mie_pending_style,\
+_mie_pending_byte_len,\
+_mie_pending_matched_prefix,\
 _mie_mode_ptr,\
 _mie_cand_count,\
 _mie_cand_word_ptr,\

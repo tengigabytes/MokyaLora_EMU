@@ -230,6 +230,27 @@ export class MIE_Bridge extends EventTarget {
     return this._jsImpl.mode ?? '';
   }
 
+  /**
+   * Single-snapshot pending view matching mie::PendingView. Style values:
+   *   0 = None, 1 = PrefixBold, 2 = Inverted.
+   * matchedPrefixBytes counts UTF-8 bytes (not codepoints) of the matched
+   * prefix inside `str`; it is 0 when style !== PrefixBold.
+   */
+  getPendingView() {
+    if (this._useWasm && this._wasm) {
+      const str = this._readWasmStr(this._wasm.mie_input_ptr());
+      return {
+        str,
+        byteLen:            this._wasm.mie_pending_byte_len(),
+        matchedPrefixBytes: this._wasm.mie_pending_matched_prefix(),
+        style:              this._wasm.mie_pending_style(),
+      };
+    }
+    // JS fallback: flat text, no style info
+    const str = this._jsImpl.inputText ?? '';
+    return { str, byteLen: new TextEncoder().encode(str).length, matchedPrefixBytes: 0, style: str ? 1 : 0 };
+  }
+
   /** Get current composition buffer as string array (JS mode only). */
   getCompositionBuffer() {
     if (this._useWasm) return [];
@@ -264,6 +285,12 @@ export class MIE_Bridge extends EventTarget {
   /** Get total page count. */
   getPageCount() {
     if (this._useWasm && this._wasm) return this._wasm.mie_page_cnt();
+    return 0;
+  }
+
+  /** Get current page index (0-based). */
+  getCurrentPage() {
+    if (this._useWasm && this._wasm) return this._wasm.mie_cur_page();
     return 0;
   }
 
@@ -435,15 +462,17 @@ export class MIE_Bridge extends EventTarget {
 
     // Emit composition update
     const candidates = this.getCandidates();
-    const inputStr   = this.getInputStr();
+    const pending    = this.getPendingView();
     const modeStr    = this.getModeStr();
     this.dispatchEvent(new CustomEvent('composition:update', {
       detail: {
-        buffer:     inputStr,
+        buffer:     pending.str,          // back-compat (string)
+        pending,                           // { str, byteLen, matchedPrefixBytes, style }
         candidates,
         committed:  this._pendingCommitted ?? '',
         mode:       modeStr,
         sel:        this.getPageSel(),
+        page:       this.getCurrentPage(),
         pageCount:  this.getPageCount(),
         wasm:       true,
       }

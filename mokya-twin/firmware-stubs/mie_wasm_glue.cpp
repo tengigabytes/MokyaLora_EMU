@@ -188,6 +188,27 @@ const char* mie_input_ptr(void) {
     return pv.str ? pv.str : "";
 }
 
+// PendingStyle enum values (matches mie::PendingStyle): 0=None, 1=PrefixBold, 2=Inverted.
+EMSCRIPTEN_KEEPALIVE extern "C"
+int mie_pending_style(void) {
+    if (!g_ime) return 0;
+    return static_cast<int>(g_ime->pending_view().style);
+}
+
+// Byte count of pending buffer (excludes terminating null).
+EMSCRIPTEN_KEEPALIVE extern "C"
+int mie_pending_byte_len(void) {
+    if (!g_ime) return 0;
+    return g_ime->pending_view().byte_len;
+}
+
+// Byte count of the matched prefix within pending (for PrefixBold style).
+EMSCRIPTEN_KEEPALIVE extern "C"
+int mie_pending_matched_prefix(void) {
+    if (!g_ime) return 0;
+    return g_ime->pending_view().matched_prefix_bytes;
+}
+
 EMSCRIPTEN_KEEPALIVE extern "C"
 const char* mie_mode_ptr(void) {
     return g_ime ? g_ime->mode_indicator() : "";
