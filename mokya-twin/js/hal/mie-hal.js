@@ -270,6 +270,25 @@ export class MIE_Bridge extends EventTarget {
     return [...this._jsImpl.candidates];
   }
 
+  /** Get the full merged candidate list (across all firmware pages). */
+  getAllCandidates() {
+    if (this._useWasm && this._wasm) {
+      const n = this._wasm.mie_cand_count();
+      const out = [];
+      for (let i = 0; i < n; i++) {
+        out.push(this._readWasmStr(this._wasm.mie_cand_word_ptr(i)));
+      }
+      return out;
+    }
+    return [...this._jsImpl.candidates];
+  }
+
+  /** Absolute selected index over the full merged candidate list. */
+  getSelectedAbs() {
+    if (this._useWasm && this._wasm) return this._wasm.mie_selected_abs();
+    return 0;
+  }
+
   /** Get selected candidate index on the current page. */
   getPageSel() {
     if (this._useWasm && this._wasm) return this._wasm.mie_sel();
@@ -461,20 +480,23 @@ export class MIE_Bridge extends EventTarget {
     }
 
     // Emit composition update
-    const candidates = this.getCandidates();
-    const pending    = this.getPendingView();
-    const modeStr    = this.getModeStr();
+    const candidates    = this.getCandidates();
+    const allCandidates = this.getAllCandidates();
+    const pending       = this.getPendingView();
+    const modeStr       = this.getModeStr();
     this.dispatchEvent(new CustomEvent('composition:update', {
       detail: {
-        buffer:     pending.str,          // back-compat (string)
-        pending,                           // { str, byteLen, matchedPrefixBytes, style }
-        candidates,
-        committed:  this._pendingCommitted ?? '',
-        mode:       modeStr,
-        sel:        this.getPageSel(),
-        page:       this.getCurrentPage(),
-        pageCount:  this.getPageCount(),
-        wasm:       true,
+        buffer:       pending.str,          // back-compat (string)
+        pending,                             // { str, byteLen, matchedPrefixBytes, style }
+        candidates,                          // page-slice (firmware kPageSize)
+        allCandidates,                       // full merged list
+        selectedAbs:  this.getSelectedAbs(),
+        committed:    this._pendingCommitted ?? '',
+        mode:         modeStr,
+        sel:          this.getPageSel(),
+        page:         this.getCurrentPage(),
+        pageCount:    this.getPageCount(),
+        wasm:         true,
       }
     }));
   }

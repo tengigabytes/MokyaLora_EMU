@@ -28,12 +28,12 @@ export class ChatScreen extends BaseScreen {
     this._scrollY  = 0;
     this._maxScroll = 0;
     this._compState = {
-      pending:    { str: '', matchedPrefixBytes: 0, style: 0 },
-      candidates: [],
-      selIdx:     0,
-      page:       0,
-      pageCount:  0,
-      committed:  '',
+      pending:       { str: '', matchedPrefixBytes: 0, style: 0 },
+      candidates:    [],
+      allCandidates: [],
+      selectedAbs:   0,
+      selIdx:        0,
+      committed:     '',
     };
     this._showComp  = true;
     // Fake RSSI waveform data (circular buffer, 40 points)
@@ -76,11 +76,11 @@ export class ChatScreen extends BaseScreen {
     };
     this._compState = {
       pending,
-      candidates: d.candidates ?? [],
-      selIdx:     d.sel ?? this.mie._jsImpl?.candidateIdx ?? 0,
-      page:       d.page ?? 0,
-      pageCount:  d.pageCount ?? 0,
-      committed:  d.committed ?? '',
+      candidates:    d.candidates ?? [],
+      allCandidates: d.allCandidates ?? d.candidates ?? [],
+      selectedAbs:   d.selectedAbs ?? d.sel ?? this.mie._jsImpl?.candidateIdx ?? 0,
+      selIdx:        d.sel ?? 0,
+      committed:     d.committed ?? '',
     };
   };
 
@@ -172,18 +172,16 @@ export class ChatScreen extends BaseScreen {
       r.ctx.fillRect(r.W - 3, indY, 2, indH);
     }
 
-    // ── Composition bar (文字 row + 候選 row, REPL-style) ───────
+    // ── Composition bar (候選 row on top, 文字 row on bottom) ─────
     if (this._showComp) {
-      // Twin does not track cursor position inside the committed buffer
-      // yet, so pending is always inline at the end.
       r.drawCompositionBar({
         committedLeft:  this._compState.committed,
         committedRight: '',
         pending:        this._compState.pending,
         candidates:     this._compState.candidates,
+        allCandidates:  this._compState.allCandidates,
+        selectedAbs:    this._compState.selectedAbs,
         selIdx:         this._compState.selIdx,
-        page:           this._compState.page,
-        pageCount:      this._compState.pageCount,
         cursorBlink:    Math.floor(now / 500) % 2 === 0,
       });
     }

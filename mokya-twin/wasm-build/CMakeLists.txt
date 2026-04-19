@@ -74,6 +74,7 @@ _mie_mode_ptr,\
 _mie_cand_count,\
 _mie_cand_word_ptr,\
 _mie_sel,\
+_mie_selected_abs,\
 _mie_page_sz,\
 _mie_page_cnt,\
 _mie_cur_page,\

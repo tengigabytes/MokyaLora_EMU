@@ -231,6 +231,12 @@ int mie_sel(void) {
     return g_ime ? g_ime->page_sel() : 0;
 }
 
+// Absolute selection index over the full merged candidate list (0..cand_count).
+EMSCRIPTEN_KEEPALIVE extern "C"
+int mie_selected_abs(void) {
+    return g_ime ? g_ime->selected() : 0;
+}
+
 // ── Pagination ───────────────────────────────────────────────────────────────
 
 EMSCRIPTEN_KEEPALIVE extern "C"

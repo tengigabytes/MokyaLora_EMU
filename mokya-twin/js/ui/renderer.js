@@ -193,38 +193,42 @@ export class MokyaRenderer {
    * @param {string}   mode       input mode label
    */
   /**
-   * Two-row MIE display matching firmware mie_repl.cpp layout:
-   *   Row 1 "文字" — committed-left + styled pending + cursor block + committed-right
-   *   Row 2 "候選" — paginated candidates with [page/total] indicator
+   * Two-row MIE display inspired by firmware mie_repl.cpp.
+   * Row order (top → bottom): 候選, 文字.
+   *
+   * The 候選 row no longer numbers entries (the user navigates with
+   * ←/→) and it packs as many candidates as will fit in the row's
+   * width; the sliding window keeps the selected candidate visible
+   * when the full list overflows.
    *
    * @param {{
    *   committedLeft:  string,
    *   committedRight: string,
    *   pending:        { str: string, matchedPrefixBytes: number, style: number },
-   *   candidates:     string[],
-   *   selIdx:         number,
-   *   page:           number,
-   *   pageCount:      number,
+   *   allCandidates:  string[],     // full merged list
+   *   candidates:     string[],     // firmware page slice (fallback)
+   *   selectedAbs:    number,       // absolute index into allCandidates
+   *   selIdx:         number,       // within-page index (fallback)
    *   cursorBlink:    boolean,
    * }} state
    */
   drawCompositionBar(state) {
-    const TEXT_H = 22;
     const CAND_H = 22;
-    const BAR_Y  = this.H - 22 /* tab bar */ - TEXT_H - CAND_H;
+    const TEXT_H = 22;
+    const BAR_Y  = this.H - 22 /* tab bar */ - CAND_H - TEXT_H;
 
     // ── Backdrop ───────────────────────────────────────────────────
     this.ctx.fillStyle = '#161618';
-    this.ctx.fillRect(0, BAR_Y, this.W, TEXT_H + CAND_H);
+    this.ctx.fillRect(0, BAR_Y, this.W, CAND_H + TEXT_H);
     this.ctx.fillStyle = this.C.BORDER;
     this.ctx.fillRect(0, BAR_Y, this.W, 1);
-    this.ctx.fillRect(0, BAR_Y + TEXT_H, this.W, 1);
+    this.ctx.fillRect(0, BAR_Y + CAND_H, this.W, 1);
 
-    // ── Row 1: 文字 ─────────────────────────────────────────────────
-    this._drawTextRow(state, BAR_Y, TEXT_H);
+    // ── Row 1 (top): 候選 ───────────────────────────────────────────
+    this._drawCandRow(state, BAR_Y, CAND_H);
 
-    // ── Row 2: 候選 ─────────────────────────────────────────────────
-    this._drawCandRow(state, BAR_Y + TEXT_H, CAND_H);
+    // ── Row 2 (bottom): 文字 ────────────────────────────────────────
+    this._drawTextRow(state, BAR_Y + CAND_H, TEXT_H);
 
     this.ctx.textAlign   = 'left';
     this.ctx.textBaseline = 'alphabetic';
@@ -316,12 +320,12 @@ export class MokyaRenderer {
     }
   }
 
-  _drawCandRow({ candidates, selIdx, page, pageCount }, y, h) {
-    const midY = y + h / 2;
+  _drawCandRow(state, y, h) {
+    const midY  = y + h / 2;
     const TAG_W = 26;
 
-    this.ctx.font       = this.F.XS;
-    this.ctx.fillStyle  = this.C.TEXT_DIM;
+    this.ctx.font        = this.F.XS;
+    this.ctx.fillStyle   = this.C.TEXT_DIM;
     this.ctx.textBaseline = 'middle';
     this.ctx.fillText('候選', 2, midY);
 
@@ -330,51 +334,67 @@ export class MokyaRenderer {
 
     this.ctx.font = this.F.ZH_MD;
 
-    if (!candidates || candidates.length === 0) {
+    // Prefer the full list so the row can overflow firmware's 5-per-page.
+    // Fall back to the page slice if the full list isn't provided.
+    const all = (state.allCandidates && state.allCandidates.length)
+                ? state.allCandidates
+                : (state.candidates ?? []);
+    if (all.length === 0) {
       this.ctx.fillStyle = this.C.TEXT_MUTED;
       this.ctx.fillText('(按鍵開始輸入)', TAG_W + 5, midY);
+      this._candWindowStart = 0;
       return;
     }
 
-    // Reserve room on the right for page indicator
-    const pageStr = (pageCount > 1) ? `[${(page | 0) + 1}/${pageCount | 0}]` : '';
-    let rightReserve = 0;
-    if (pageStr) {
-      this.ctx.font = this.F.XS;
-      rightReserve = this.ctx.measureText(pageStr).width + 6;
-      this.ctx.font = this.F.ZH_MD;
-    }
+    // Absolute selection; fall back to page-relative when the full list
+    // isn't available (JS fallback path).
+    const sel = (state.selectedAbs !== undefined && state.selectedAbs !== null)
+                ? state.selectedAbs
+                : (state.selIdx ?? 0);
 
-    let x = TAG_W + 5;
-    const limitX = this.W - rightReserve - 2;
-    candidates.forEach((c, i) => {
-      if (x >= limitX) return;
-      const num = `${i + 1}.`;
-      const numW = this._measureWith(this.F.XS, num);
-      const candW = this.ctx.measureText(c).width;
-      const slotW = numW + candW + 6;
-      const sel = (i === selIdx);
-      if (sel) {
-        this.ctx.fillStyle = this.C.GREEN_MUTED;
-        this.ctx.fillRect(x - 1, y + 3, slotW, h - 6);
+    // Width budget. Reserve a small gutter on each side; no page indicator.
+    const startX = TAG_W + 5;
+    const endX   = this.W - 3;
+    const PAD    = 6;   // space between candidates (in px)
+    const SLOT_X_PAD = 6; // horizontal padding inside each candidate slot
+
+    // Compute candidate widths once.
+    const widths = all.map(c => this.ctx.measureText(c).width + SLOT_X_PAD);
+
+    // Maintain a sliding window start so the selected candidate is visible.
+    if (this._candWindowStart === undefined) this._candWindowStart = 0;
+    let ws = this._candWindowStart;
+    if (sel < ws) ws = sel;                       // scroll left to reveal sel
+
+    // Scroll right until sel fits within [ws .. ws+fit).
+    // Compute how many from ws fit in the row width; if sel outside, advance ws.
+    const fitFrom = (from) => {
+      let x = startX, n = 0;
+      for (let i = from; i < all.length; i++) {
+        const w = widths[i] + (n > 0 ? PAD : 0);
+        if (x + w > endX) break;
+        x += w; n++;
       }
-      // Number
-      this.ctx.font = this.F.XS;
-      this.ctx.fillStyle = sel ? this.C.GREEN : this.C.TEXT_DIM;
-      this.ctx.fillText(num, x, midY);
-      // Word
-      this.ctx.font = this.F.ZH_MD;
-      this.ctx.fillStyle = sel ? this.C.GREEN : this.C.TEXT;
-      this.ctx.fillText(c, x + numW + 1, midY);
-      x += slotW;
-    });
+      return n;
+    };
+    while (sel >= ws + fitFrom(ws) && ws < all.length - 1) ws++;
+    this._candWindowStart = ws;
 
-    if (pageStr) {
-      this.ctx.font = this.F.XS;
-      this.ctx.fillStyle = this.C.TEXT_DIM;
-      this.ctx.textAlign = 'right';
-      this.ctx.fillText(pageStr, this.W - 3, midY);
-      this.ctx.textAlign = 'left';
+    // Render the visible slice.
+    let x = startX;
+    for (let i = ws; i < all.length; i++) {
+      const w = widths[i] + (i > ws ? PAD : 0);
+      if (x + w > endX) break;
+      const slotX = x + (i > ws ? PAD : 0);
+      const slotW = widths[i];
+      const isSel = (i === sel);
+      if (isSel) {
+        this.ctx.fillStyle = this.C.GREEN_MUTED;
+        this.ctx.fillRect(slotX - 1, y + 3, slotW + 1, h - 6);
+      }
+      this.ctx.fillStyle = isSel ? this.C.GREEN : this.C.TEXT;
+      this.ctx.fillText(all[i], slotX + SLOT_X_PAD / 2, midY);
+      x += w;
     }
   }
 
