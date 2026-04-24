@@ -56,7 +56,7 @@ async function boot() {
   // after the Service Worker cache is evicted. Bump MIE_ASSET_VER in
   // lockstep with sw.js CACHE_VERSION whenever any dict or wasm asset is
   // rebuilt so the query string changes.
-  const MIE_ASSET_VER = 'v16';
+  const MIE_ASSET_VER = 'v18';
   const v = `?v=${MIE_ASSET_VER}`;
   await mie.loadWasm(`./wasm/mie_core.wasm${v}`);
 
@@ -65,6 +65,7 @@ async function boot() {
       await mie.loadDictionary(
         `./data/dict_dat.bin${v}`,    `./data/dict_values.bin${v}`,
         `./data/en_dat.bin${v}`,      `./data/en_values.bin${v}`,
+        `./data/dict_v4.bin${v}`,
       );
     } else {
       await mie.loadDictionary(`./data/zhuyin-mock.json${v}`);
@@ -72,6 +73,10 @@ async function boot() {
   } catch (err) {
     console.warn('[App] Dict load failed, continuing without:', err.message);
   }
+
+  // Persist the firmware's LruCache on tab close so repeat-typed chars
+  // still promote across reloads.
+  window.addEventListener('beforeunload', () => mie.flushLru?.());
 
   updateSplash(60, 'Initialising serial bridge…');
 

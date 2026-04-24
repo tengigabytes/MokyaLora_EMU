@@ -20,6 +20,7 @@
  * Exported functions (STANDALONE_WASM, no Emscripten JS glue):
  *   mie_load_zh_dict(dat_ptr, dat_len, val_ptr, val_len) -> int
  *   mie_load_en_dict(dat_ptr, dat_len, val_ptr, val_len) -> int
+ *   mie_load_v4_dict(buf_ptr, buf_len)                    -> int
  *   mie_ctx_init()                                        -> int
  *   mie_key(keycode, pressed, now_ms)                     -> int
  *   mie_tick(now_ms)                                      -> int
@@ -36,6 +37,15 @@
  *   mie_cur_page()                                        -> int
  *   mie_page_cand_ptr(idx)                                -> const char*
  *   mie_page_cand_cnt()                                   -> int
+ *   mie_picker_active()                                   -> int  (0/1)
+ *   mie_picker_cols()                                     -> int
+ *   mie_picker_cell_count()                               -> int
+ *   mie_picker_cell_ptr(idx)                              -> const char*
+ *   mie_picker_selected()                                 -> int
+ *   mie_lru_serialized_size()                             -> int
+ *   mie_lru_count()                                       -> int
+ *   mie_serialize_lru(buf, cap)                           -> int
+ *   mie_load_lru(buf, len)                                -> int  (0/1)
  *   mie_clear_state()                                     -> void
  *   mie_set_text_context(prev_utf8)                       -> void
  */
@@ -43,6 +53,7 @@
 #include <emscripten.h>
 #include <mie/ime_logic.h>
 #include <mie/trie_searcher.h>
+#include <mie/composition_searcher.h>
 #include <mie/hal_port.h>
 
 #include <cstdint>
@@ -52,11 +63,13 @@
 
 // ── Singleton state ──────────────────────────────────────────────────────────
 
-static mie::TrieSearcher g_zh;
-static mie::TrieSearcher g_en;
-static bool              g_zh_loaded = false;
-static bool              g_en_loaded = false;
-static mie::ImeLogic*    g_ime       = nullptr;
+static mie::TrieSearcher        g_zh;
+static mie::TrieSearcher        g_en;
+static mie::CompositionSearcher g_v4;
+static bool                     g_zh_loaded = false;
+static bool                     g_en_loaded = false;
+static bool                     g_v4_loaded = false;
+static mie::ImeLogic*           g_ime       = nullptr;
 
 // ── Listener — stashes events for JS to drain ────────────────────────────────
 
@@ -121,6 +134,17 @@ int mie_load_en_dict(const uint8_t* dat, int dat_len,
     return g_en_loaded ? 1 : 0;
 }
 
+// MIE4 v4 composition dict (single blob). Attached to ImeLogic via
+// attach_composition_searcher() inside mie_ctx_init() — callers may load
+// the v4 dict either before or after mie_ctx_init(); attachment happens at
+// init time and any subsequent load_v4 is a no-op for the active context.
+EMSCRIPTEN_KEEPALIVE extern "C"
+int mie_load_v4_dict(const uint8_t* buf, int len) {
+    g_v4_loaded = g_v4.load_from_memory(buf, static_cast<size_t>(len));
+    if (g_v4_loaded && g_ime) g_ime->attach_composition_searcher(&g_v4);
+    return g_v4_loaded ? 1 : 0;
+}
+
 // ── Context lifecycle ────────────────────────────────────────────────────────
 
 EMSCRIPTEN_KEEPALIVE extern "C"
@@ -130,6 +154,7 @@ int mie_ctx_init(void) {
     g_ime = new(std::nothrow) mie::ImeLogic(g_zh, g_en_loaded ? &g_en : nullptr);
     if (!g_ime) return 0;
     g_ime->set_listener(&g_listener);
+    if (g_v4_loaded) g_ime->attach_composition_searcher(&g_v4);
     return 1;
 }
 
@@ -263,6 +288,59 @@ EMSCRIPTEN_KEEPALIVE extern "C"
 const char* mie_page_cand_ptr(int idx) {
     if (!g_ime || idx < 0 || idx >= g_ime->page_cand_count()) return "";
     return g_ime->page_cand(idx).word;
+}
+
+// ── Symbol picker (Phase 1.4 Task B) ─────────────────────────────────────────
+
+EMSCRIPTEN_KEEPALIVE extern "C"
+int mie_picker_active(void) {
+    return (g_ime && g_ime->picker_active()) ? 1 : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE extern "C"
+int mie_picker_cols(void) {
+    return g_ime ? g_ime->picker_cols() : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE extern "C"
+int mie_picker_cell_count(void) {
+    return g_ime ? g_ime->picker_cell_count() : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE extern "C"
+const char* mie_picker_cell_ptr(int idx) {
+    if (!g_ime) return "";
+    const char* s = g_ime->picker_cell(idx);
+    return s ? s : "";
+}
+
+EMSCRIPTEN_KEEPALIVE extern "C"
+int mie_picker_selected(void) {
+    return g_ime ? g_ime->picker_selected() : 0;
+}
+
+// ── Personalised LRU cache (Phase 1.6) ───────────────────────────────────────
+
+EMSCRIPTEN_KEEPALIVE extern "C"
+int mie_lru_serialized_size(void) {
+    return g_ime ? g_ime->lru_serialized_size() : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE extern "C"
+int mie_lru_count(void) {
+    return g_ime ? g_ime->lru_count() : 0;
+}
+
+EMSCRIPTEN_KEEPALIVE extern "C"
+int mie_serialize_lru(uint8_t* buf, int cap) {
+    if (!g_ime) return -1;
+    return g_ime->serialize_lru(buf, cap);
+}
+
+EMSCRIPTEN_KEEPALIVE extern "C"
+int mie_load_lru(const uint8_t* buf, int len) {
+    if (!g_ime) return 0;
+    return g_ime->load_lru(buf, len) ? 1 : 0;
 }
 
 // ── Actions ──────────────────────────────────────────────────────────────────

@@ -343,6 +343,14 @@ export class MokyaRenderer {
     this.ctx.fillStyle = this.C.BORDER;
     this.ctx.fillRect(TAG_W, y + 3, 1, h - 6);
 
+    // SYM1 long-press symbol picker takes over the candidate area while
+    // active. Firmware intercepts all DPAD/OK/SYM1 routing — we just
+    // render the current snapshot.
+    if (state.picker && state.picker.active) {
+      this._drawPickerRow(state.picker, TAG_W + 5, y, h);
+      return;
+    }
+
     this.ctx.font = this.F.ZH_MD;
 
     // Prefer the full list so the row can overflow firmware's 5-per-page.
@@ -407,6 +415,46 @@ export class MokyaRenderer {
       this.ctx.fillText(all[i], slotX + SLOT_X_PAD / 2, midY);
       x += w;
     }
+  }
+
+  _drawPickerRow(picker, startX, y, h) {
+    const cells = picker.cells ?? [];
+    const cols  = Math.max(1, picker.cols | 0 || 4);
+    const sel   = picker.selected | 0;
+    const endX  = this.W - 3;
+    const rowW  = endX - startX;
+    const slotW = Math.max(16, Math.floor(rowW / cols) - 2);
+    const slotH = h - 6;
+    const midY  = y + h / 2;
+
+    this.ctx.font         = this.F.ZH_MD;
+    this.ctx.textBaseline = 'middle';
+    this.ctx.textAlign    = 'center';
+
+    // First `cols` cells occupy the single candidate row (the picker grid
+    // wraps across multiple visual rows on the real hardware's 4×4 layout;
+    // the composition bar only has space for one row here, so we slide the
+    // window to keep the selected cell visible).
+    const row        = Math.floor(sel / cols);
+    const windowStart = row * cols;
+    for (let c = 0; c < cols; c++) {
+      const idx = windowStart + c;
+      if (idx >= cells.length) break;
+      const cx = startX + c * (slotW + 2);
+      const isSel = (idx === sel);
+      if (isSel) {
+        this.ctx.fillStyle = this.C.GREEN;
+        this.ctx.fillRect(cx, y + 3, slotW, slotH);
+        this.ctx.fillStyle = '#0A0A0A';
+      } else {
+        this.ctx.fillStyle = this.C.SURFACE3 ?? '#2A2A2E';
+        this.ctx.fillRect(cx, y + 3, slotW, slotH);
+        this.ctx.fillStyle = this.C.TEXT;
+      }
+      this.ctx.fillText(cells[idx] || '', cx + slotW / 2, midY);
+    }
+
+    this.ctx.textAlign = 'left';
   }
 
   _underline(x, y, w) {

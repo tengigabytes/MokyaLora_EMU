@@ -34,6 +34,7 @@ export class ChatScreen extends BaseScreen {
       selectedAbs:   0,
       selIdx:        0,
       committed:     '',
+      picker:        { active: false, cells: [], cols: 0, selected: 0 },
     };
     this._showComp  = true;
     // Fake RSSI waveform data (circular buffer, 40 points)
@@ -81,6 +82,7 @@ export class ChatScreen extends BaseScreen {
       selectedAbs:   d.selectedAbs ?? d.sel ?? this.mie._jsImpl?.candidateIdx ?? 0,
       selIdx:        d.sel ?? 0,
       committed:     d.committed ?? '',
+      picker:        d.picker ?? { active: false, cells: [], cols: 0, selected: 0 },
     };
   };
 
@@ -183,6 +185,7 @@ export class ChatScreen extends BaseScreen {
         selectedAbs:    this._compState.selectedAbs,
         selIdx:         this._compState.selIdx,
         mode:           this.mie.currentMode,
+        picker:         this._compState.picker,
         cursorBlink:    Math.floor(now / 500) % 2 === 0,
       });
     }
@@ -207,9 +210,11 @@ export class ChatScreen extends BaseScreen {
   }
 
   handleKeyTap({ key, tapCount }) {
-    // Only scroll with UP/DOWN when no active composition (buffer empty, no candidates)
+    // Only scroll with UP/DOWN when no active composition and no picker overlay
+    // (buffer empty, no candidates, picker closed).
     const pendingLen = (this._compState.pending?.str ?? '').length;
-    const hasComp = pendingLen > 0 || this._compState.candidates.length > 0;
+    const pickerActive = !!this._compState.picker?.active;
+    const hasComp = pendingLen > 0 || this._compState.candidates.length > 0 || pickerActive;
     if (key.fn === 'UP'   && !hasComp) { this._scrollY = Math.max(0, this._scrollY - 30); return; }
     if (key.fn === 'DOWN' && !hasComp) { this._scrollY = Math.min(this._maxScroll, this._scrollY + 30); return; }
     // Forward everything (including LEFT/RIGHT/UP/DOWN during composition) to MIE

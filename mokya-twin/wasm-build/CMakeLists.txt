@@ -12,11 +12,12 @@
 # Output: mokya-twin/wasm/mie_core.wasm
 #
 # MIE_SRC must point to the firmware/mie directory that contains:
-#   src/ime_logic.cpp  src/trie_searcher.cpp  src/mie_init.cpp
-#   src/ime_keys.cpp   src/ime_smart.cpp      src/ime_search.cpp
-#   src/ime_commit.cpp src/ime_display.cpp    src/ime_direct.cpp
-#   src/mie_c_api.cpp
-#   include/mie/mie.h  include/mie/ime_logic.h  include/mie/trie_searcher.h
+#   src/ime_logic.cpp         src/trie_searcher.cpp       src/mie_init.cpp
+#   src/ime_keys.cpp          src/ime_smart.cpp           src/ime_search.cpp
+#   src/ime_commit.cpp        src/ime_display.cpp         src/ime_direct.cpp
+#   src/composition_searcher.cpp  src/lru_cache.cpp       src/mie_c_api.cpp
+#   include/mie/mie.h         include/mie/ime_logic.h     include/mie/trie_searcher.h
+#   include/mie/composition_searcher.h  include/mie/lru_cache.h
 #
 # build_wasm.sh handles checking out the correct firmware branch automatically.
 
@@ -36,6 +37,8 @@ endif()
 add_executable(mie_core
   ${CMAKE_CURRENT_SOURCE_DIR}/../firmware-stubs/mie_wasm_glue.cpp
   ${MIE_SRC}/src/trie_searcher.cpp
+  ${MIE_SRC}/src/composition_searcher.cpp
+  ${MIE_SRC}/src/lru_cache.cpp
   ${MIE_SRC}/src/ime_logic.cpp
   ${MIE_SRC}/src/ime_keys.cpp
   ${MIE_SRC}/src/ime_smart.cpp
@@ -60,6 +63,7 @@ target_link_options(mie_core PRIVATE
   "-sEXPORTED_FUNCTIONS=[\
 _mie_load_zh_dict,\
 _mie_load_en_dict,\
+_mie_load_v4_dict,\
 _mie_ctx_init,\
 _mie_key,\
 _mie_tick,\
@@ -80,6 +84,15 @@ _mie_page_cnt,\
 _mie_cur_page,\
 _mie_page_cand_ptr,\
 _mie_page_cand_cnt,\
+_mie_picker_active,\
+_mie_picker_cols,\
+_mie_picker_cell_count,\
+_mie_picker_cell_ptr,\
+_mie_picker_selected,\
+_mie_lru_serialized_size,\
+_mie_lru_count,\
+_mie_serialize_lru,\
+_mie_load_lru,\
 _mie_clear_state,\
 _mie_set_text_context,\
 _malloc,\
