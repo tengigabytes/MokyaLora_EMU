@@ -26,6 +26,9 @@ import { MapScreen }            from './ui/screens/map-screen.js';
 import { SettingsScreen }       from './ui/screens/settings-screen.js';
 import { HomeScreen }           from './ui/screens/home-screen.js';
 import { MenuScreen }           from './ui/screens/menu-screen.js';
+import { MeshtasticScreen }     from './ui/screens/meshtastic-screen.js';
+import { MessagesScreen }       from './ui/screens/messages-screen.js';
+import { NodesScreen }          from './ui/screens/nodes-screen.js';
 import { PlaceholderScreen }    from './ui/screens/placeholder-screen.js';
 import { MiefFont, installMiefFont } from './ui/mief-font.js';
 
@@ -45,7 +48,7 @@ async function boot() {
   // to the browser's native rasteriser inside the patched ctx.
   const miefFont = new MiefFont();
   try {
-    await miefFont.load(`./data/mie_unifont_16.bin?v=v22`);
+    await miefFont.load(`./data/mie_unifont_16.bin?v=v23`);
     installMiefFont(display.getContext(), miefFont);
     console.log(`[App] Unifont loaded — ${miefFont.glyphCount} glyphs`);
   } catch (err) {
@@ -73,7 +76,7 @@ async function boot() {
   // after the Service Worker cache is evicted. Bump MIE_ASSET_VER in
   // lockstep with sw.js CACHE_VERSION whenever any dict or wasm asset is
   // rebuilt so the query string changes.
-  const MIE_ASSET_VER = 'v22';
+  const MIE_ASSET_VER = 'v23';
   const v = `?v=${MIE_ASSET_VER}`;
   await mie.loadWasm(`./wasm/mie_core.wasm${v}`);
 
@@ -112,7 +115,13 @@ async function boot() {
   screens = new ScreenManager(renderer);
   screens.register('home',        new HomeScreen(renderer, mie, serial));
   screens.register('menu',        new MenuScreen(renderer, mie, serial));
+  // MESHTASTIC sub-tree
+  screens.register('meshtastic',  new MeshtasticScreen(renderer, mie, serial));
+  screens.register('messages',    new MessagesScreen(renderer, mie, serial));
+  screens.register('nodes',       new NodesScreen(renderer, mie, serial));
   screens.register('chat',        new ChatScreen(renderer, mie, serial));
+  screens.register('connect',     new PlaceholderScreen(renderer, mie, serial, '連接'));
+  // Top-level menu targets
   screens.register('mesh-config', new PlaceholderScreen(renderer, mie, serial, 'MESH 設定'));
   screens.register('sensors',     new PlaceholderScreen(renderer, mie, serial, '感測器'));
   screens.register('gnss',        new MapScreen(renderer, mie, serial));

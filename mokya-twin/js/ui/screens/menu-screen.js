@@ -17,7 +17,7 @@
 import { BaseScreen } from '../screen-manager.js';
 
 export const MENU_ITEMS = [
-  { icon: 'chat',     label: 'MESHTASTIC', target: 'chat'        },
+  { icon: 'chat',     label: 'MESHTASTIC', target: 'meshtastic'  },
   { icon: 'mesh-cfg', label: 'MESH 設定',  target: 'mesh-config' },
   { icon: 'sensors',  label: '感測器',     target: 'sensors'     },
   { icon: 'gnss',     label: 'GNSS',       target: 'gnss'        },
