@@ -24,6 +24,7 @@ import { ScreenManager }        from './ui/screen-manager.js';
 import { ChatScreen }           from './ui/screens/chat-screen.js';
 import { MapScreen }            from './ui/screens/map-screen.js';
 import { SettingsScreen }       from './ui/screens/settings-screen.js';
+import { MiefFont, installMiefFont } from './ui/mief-font.js';
 
 // ── Globals (accessible in console for dev) ──────────────────────
 let display, keyboard, mie, serial, renderer, screens;
@@ -34,6 +35,19 @@ async function boot() {
   // ── 1. Display HAL ──────────────────────────────────────────────
   const canvas = document.getElementById('screen-canvas');
   display = new DisplayHAL(canvas);
+
+  // ── 1a. MIE Unifont ─────────────────────────────────────────────
+  // Routes canvas fillText/measureText through the firmware's 16 px 1bpp
+  // bitmap font. Codepoints not covered by the font (emoji etc.) fall back
+  // to the browser's native rasteriser inside the patched ctx.
+  const miefFont = new MiefFont();
+  try {
+    await miefFont.load(`./data/mie_unifont_16.bin?v=v21`);
+    installMiefFont(display.getContext(), miefFont);
+    console.log(`[App] Unifont loaded — ${miefFont.glyphCount} glyphs`);
+  } catch (err) {
+    console.warn('[App] Unifont load failed, using native canvas text:', err.message);
+  }
 
   updateSplash(25, 'Scanning keyboard matrix…');
 
@@ -56,7 +70,7 @@ async function boot() {
   // after the Service Worker cache is evicted. Bump MIE_ASSET_VER in
   // lockstep with sw.js CACHE_VERSION whenever any dict or wasm asset is
   // rebuilt so the query string changes.
-  const MIE_ASSET_VER = 'v18';
+  const MIE_ASSET_VER = 'v21';
   const v = `?v=${MIE_ASSET_VER}`;
   await mie.loadWasm(`./wasm/mie_core.wasm${v}`);
 
