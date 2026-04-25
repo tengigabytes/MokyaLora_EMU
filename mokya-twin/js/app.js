@@ -29,6 +29,10 @@ import { MenuScreen }           from './ui/screens/menu-screen.js';
 import { MeshtasticScreen }     from './ui/screens/meshtastic-screen.js';
 import { MessagesScreen }       from './ui/screens/messages-screen.js';
 import { NodesScreen }          from './ui/screens/nodes-screen.js';
+import { MeshConfigScreen }     from './ui/screens/mesh-config-screen.js';
+import { MeshModulesScreen }    from './ui/screens/mesh-modules-screen.js';
+import { MeshChannelsScreen }   from './ui/screens/mesh-channels-screen.js';
+import { SettingsListScreen }   from './ui/screens/settings-list-screen.js';
 import { PlaceholderScreen }    from './ui/screens/placeholder-screen.js';
 import { MiefFont, installMiefFont } from './ui/mief-font.js';
 
@@ -48,7 +52,7 @@ async function boot() {
   // to the browser's native rasteriser inside the patched ctx.
   const miefFont = new MiefFont();
   try {
-    await miefFont.load(`./data/mie_unifont_16.bin?v=v23`);
+    await miefFont.load(`./data/mie_unifont_16.bin?v=v24`);
     installMiefFont(display.getContext(), miefFont);
     console.log(`[App] Unifont loaded — ${miefFont.glyphCount} glyphs`);
   } catch (err) {
@@ -76,7 +80,7 @@ async function boot() {
   // after the Service Worker cache is evicted. Bump MIE_ASSET_VER in
   // lockstep with sw.js CACHE_VERSION whenever any dict or wasm asset is
   // rebuilt so the query string changes.
-  const MIE_ASSET_VER = 'v23';
+  const MIE_ASSET_VER = 'v24';
   const v = `?v=${MIE_ASSET_VER}`;
   await mie.loadWasm(`./wasm/mie_core.wasm${v}`);
 
@@ -122,7 +126,14 @@ async function boot() {
   screens.register('chat',        new ChatScreen(renderer, mie, serial));
   screens.register('connect',     new PlaceholderScreen(renderer, mie, serial, '連接'));
   // Top-level menu targets
-  screens.register('mesh-config', new PlaceholderScreen(renderer, mie, serial, 'MESH 設定'));
+  // mesh-config is a tree: MeshConfigScreen → SettingsListScreen / MeshModulesScreen / MeshChannelsScreen.
+  // The shared SettingsListScreen instance is mutated via setData() before each navigation.
+  const settingsList = new SettingsListScreen(renderer, mie, serial);
+  const deps = { settingsList };
+  screens.register('mesh-config',         new MeshConfigScreen(renderer, mie, serial, deps));
+  screens.register('mesh-modules',        new MeshModulesScreen(renderer, mie, serial, deps));
+  screens.register('mesh-channels',       new MeshChannelsScreen(renderer, mie, serial, deps));
+  screens.register('mesh-settings-list',  settingsList);
   screens.register('sensors',     new PlaceholderScreen(renderer, mie, serial, '感測器'));
   screens.register('gnss',        new MapScreen(renderer, mie, serial));
   screens.register('battery',     new PlaceholderScreen(renderer, mie, serial, '電池'));
