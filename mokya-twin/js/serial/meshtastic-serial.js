@@ -1,3 +1,5 @@
+import { decodeFromRadio, encodeWantConfig } from './meshtastic-frame.js';
+
 /**
  * MeshtasticSerial — Web Serial API bridge to physical Meshtastic device
  *
@@ -76,6 +78,10 @@ export class MeshtasticSerial extends EventTarget {
       this._setState(SerialState.CONNECTED);
       this._emit('serial:connected', { baudRate: this.baudRate });
       console.log('[Serial] Connected at', this.baudRate, 'baud');
+      // Request a full config dump from the device. The reply arrives as
+      // a stream of FromRadio packets terminated by FromRadio.config_complete_id.
+      try { await this._sendWantConfig(); }
+      catch (e) { console.warn('[Serial] want_config failed:', e.message); }
     } catch (err) {
       this._setState(SerialState.ERROR);
       this._emit('serial:error', { message: err.message });
@@ -153,59 +159,83 @@ export class MeshtasticSerial extends EventTarget {
   }
 
   _parsePackets() {
-    // Simplified framing: look for [0x94 0xC3][len16le][payload...]
-    // Phase 3 will implement full protobuf parsing
+    // Meshtastic stream framing: [0x94 0xC3][len_msb len_lsb][payload].
+    // Length is BIG-ENDIAN — confirmed against meshtastic/python
+    // mesh_interface._parseFrame and firmware StreamAPI::handleFromRadio.
     const buf = this._rxBuf;
     let i = 0;
-    while (i < this._rxHead - 4) {
-      if (buf[i] === PKT_MAGIC[0] && buf[i+1] === PKT_MAGIC[1]) {
-        const len = buf[i+2] | (buf[i+3] << 8);
-        if (this._rxHead - i - 4 >= len) {
-          const payload = buf.slice(i + 4, i + 4 + len);
-          this._dispatchPacket(payload);
-          i += 4 + len;
-          continue;
-        }
-      }
-      i++;
+    while (i + 4 <= this._rxHead) {
+      if (buf[i] !== PKT_MAGIC[0] || buf[i + 1] !== PKT_MAGIC[1]) { i++; continue; }
+      const len = (buf[i + 2] << 8) | buf[i + 3];
+      if (this._rxHead - i - 4 < len) break;          // wait for more bytes
+      const payload = buf.slice(i + 4, i + 4 + len);
+      this._dispatchPacket(payload);
+      i += 4 + len;
+    }
+    // Compact buffer — drop everything before i.
+    if (i > 0) {
+      const remaining = this._rxHead - i;
+      this._rxBuf.copyWithin(0, i, this._rxHead);
+      this._rxHead = remaining;
     }
   }
 
   _dispatchPacket(payload) {
-    // Phase 3: full protobuf decode
-    // Phase 1: treat payload as UTF-8 text after first 4 bytes (fake header)
-    try {
-      const text = new TextDecoder().decode(payload.slice(4));
-      const msg = {
-        from: 'MESH-' + Math.floor(Math.random() * 9000 + 1000),
-        text: text.trim(),
-        time: new Date().toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' }),
-        rssi: -(50 + Math.floor(Math.random() * 60)),
-        snr:  +(Math.random() * 8 - 2).toFixed(1),
-      };
-      this._emit('serial:message', { message: msg });
-    } catch {}
+    let fromRadio;
+    try { fromRadio = decodeFromRadio(payload); }
+    catch (err) {
+      console.warn('[Serial] decode failed:', err.message, payload);
+      return;
+    }
+    // Fan out to higher-level events so consumers don't need to switch
+    // on the FromRadio top-level themselves.
+    this._emit('serial:fromradio', { fromRadio });
+    if (fromRadio.myInfo)            this._emit('serial:my_info',     { myInfo:   fromRadio.myInfo });
+    if (fromRadio.nodeInfo)          this._emit('serial:node_info',   { nodeInfo: fromRadio.nodeInfo });
+    if (fromRadio.config)            this._emit('serial:config',      { config:   fromRadio.config });
+    if (fromRadio.channel)           this._emit('serial:channel',     { channel:  fromRadio.channel });
+    if (fromRadio.metadata)          this._emit('serial:metadata',    { metadata: fromRadio.metadata });
+    if (fromRadio.configCompleteId !== undefined) {
+      this._emit('serial:config_complete', { id: fromRadio.configCompleteId });
+      console.log('[Serial] Config dump complete (id=' + fromRadio.configCompleteId + ')');
+    }
   }
 
-  // ── Encoding (Phase 1 simplified) ────────────────────────────
+  // ── Sending raw ToRadio frames ─────────────────────────────
 
-  _encodeTextMessage(text) {
-    // Simplified: [magic 2B][len 2B][4B fake header][UTF-8 text]
-    const textBytes = new TextEncoder().encode(text);
-    const payload   = new Uint8Array(4 + textBytes.length);
-    payload[0] = 0x08; // field 1, wire type 0 (fake portnum)
-    payload[1] = 0x01; // TEXT_MESSAGE_APP = 1
-    payload[2] = 0x12; // field 2, wire type 2 (fake payload)
-    payload[3] = textBytes.length;
-    payload.set(textBytes, 4);
-
+  /** Wrap a ToRadio protobuf payload in the Meshtastic stream frame. */
+  _frameToRadio(payload) {
     const frame = new Uint8Array(4 + payload.length);
     frame[0] = PKT_MAGIC[0];
     frame[1] = PKT_MAGIC[1];
-    frame[2] =  payload.length       & 0xFF;
-    frame[3] = (payload.length >> 8) & 0xFF;
+    frame[2] = (payload.length >> 8) & 0xFF;        // BE
+    frame[3] =  payload.length       & 0xFF;
     frame.set(payload, 4);
     return frame;
+  }
+
+  /** Send `ToRadio { want_config_id = nonce }`. Triggers a config dump. */
+  async _sendWantConfig(nonce = 1) {
+    const payload = encodeWantConfig(nonce);
+    await this._writer.write(this._frameToRadio(payload));
+    console.log('[Serial] → want_config_id =', nonce);
+  }
+
+  // ── Encoding (placeholder for sendTextMessage path) ──────────
+
+  _encodeTextMessage(text) {
+    // Real ToRadio.packet encoding is non-trivial (MeshPacket → Data
+    // sub-message → portnum=TEXT_MESSAGE_APP=1 → utf-8 payload). For
+    // now we still emit the simulation-mode frame so the EMU's
+    // sendText path at least round-trips locally; the real encoder
+    // lives in a follow-up commit once the receive path is verified
+    // against a real device.
+    const textBytes = new TextEncoder().encode(text);
+    const payload   = new Uint8Array(4 + textBytes.length);
+    payload[0] = 0x08; payload[1] = 0x01;            // fake portnum varint
+    payload[2] = 0x12; payload[3] = textBytes.length; // fake payload len
+    payload.set(textBytes, 4);
+    return this._frameToRadio(payload);
   }
 
   // ── Simulation mode ──────────────────────────────────────────

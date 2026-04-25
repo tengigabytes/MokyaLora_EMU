@@ -41,6 +41,7 @@ import { SystemConfigScreen }   from './ui/screens/system-config-screen.js';
 import { PlaceholderScreen }    from './ui/screens/placeholder-screen.js';
 import { save as saveMeshConfig }   from './ui/screens/mesh-config-store.js';
 import { save as saveSystemConfig } from './ui/screens/system-settings-store.js';
+import { NODES, pushSignalSample } from './ui/screens/nodes-data.js';
 import { MiefFont, installMiefFont } from './ui/mief-font.js';
 
 // ── Globals (accessible in console for dev) ──────────────────────
@@ -59,7 +60,7 @@ async function boot() {
   // to the browser's native rasteriser inside the patched ctx.
   const miefFont = new MiefFont();
   try {
-    await miefFont.load(`./data/mie_unifont_16.bin?v=v30`);
+    await miefFont.load(`./data/mie_unifont_16.bin?v=v31`);
     installMiefFont(display.getContext(), miefFont);
     console.log(`[App] Unifont loaded — ${miefFont.glyphCount} glyphs`);
   } catch (err) {
@@ -87,7 +88,7 @@ async function boot() {
   // after the Service Worker cache is evicted. Bump MIE_ASSET_VER in
   // lockstep with sw.js CACHE_VERSION whenever any dict or wasm asset is
   // rebuilt so the query string changes.
-  const MIE_ASSET_VER = 'v30';
+  const MIE_ASSET_VER = 'v31';
   const v = `?v=${MIE_ASSET_VER}`;
   await mie.loadWasm(`./wasm/mie_core.wasm${v}`);
 
@@ -162,6 +163,21 @@ async function boot() {
   screens.register('gnss',        new MapScreen(renderer, mie, serial, { nodeDetail }));
   screens.register('battery',     new BatteryScreen(renderer, mie, serial));
 
+  // ── Mirror real Meshtastic packets into the EMU registries ───────
+  serial.addEventListener('serial:my_info', (e) => {
+    const my = e.detail.myInfo;
+    if (my?.myNodeNum) {
+      serial.myNodeId = '!' + my.myNodeNum.toString(16).padStart(8, '0');
+      console.log('[App] my_info — myNodeNum =', serial.myNodeId);
+    }
+  });
+  serial.addEventListener('serial:node_info', (e) => {
+    upsertNode(e.detail.nodeInfo);
+  });
+  serial.addEventListener('serial:config_complete', (e) => {
+    addDebugEntry('serial', `config dump complete (id=${e.detail.id})`);
+  });
+
   // ── 7. Wire keyboard → MIE → screens ────────────────────────────
   keyboard.addEventListener('key:down', (e) => {
     screens.handleKeyDown(e.detail);
@@ -219,6 +235,101 @@ async function boot() {
   window.mokya = { display, keyboard, mie, serial, renderer, screens };
   console.log('%c🟢 MokyaLora Digital Twin ready — Phase 2', 'color:#30D158;font-weight:bold');
   console.log('Access globals via window.mokya.*');
+}
+
+/**
+ * Merge an incoming meshtastic NodeInfo into the live NODES registry.
+ * Matches by user.id (string like "!a1b2c3d4"); inserts a new entry
+ * with the canonical EMU shape if not present.
+ */
+function upsertNode(ni) {
+  if (!ni || !ni.user || !ni.user.id) return;
+  const id = ni.user.id;
+  let n = NODES.find(x => x.user.id === id);
+  if (!n) {
+    n = {
+      num: ni.num ?? 0,
+      user: {
+        id,
+        long_name:    ni.user.longName  ?? id,
+        short_name:   ni.user.shortName ?? id.slice(-4),
+        macaddr:      ni.user.macaddr   ?? '',
+        hw_model:     hwModelName(ni.user.hwModel),
+        is_licensed:  !!ni.user.isLicensed,
+        public_key:   ni.user.publicKey ?? '',
+        role:         roleName(ni.user.role),
+      },
+      position: {
+        lat_i: 0, lon_i: 0, alt: 0,
+        time: '—', location_source: 'UNSET', precision_bits: 0, sats_in_view: 0,
+      },
+      snr: null, last_heard: '—', rssi: null,
+      device_metrics: {
+        battery_level: 0, voltage: 0,
+        channel_utilization: 0, air_util_tx: 0, uptime_seconds: 0,
+      },
+      channel: ni.channel ?? 0, via_mqtt: !!ni.viaMqtt, hops_away: ni.hopsAway ?? 0,
+      is_favorite: !!ni.isFavorite, is_ignored: !!ni.isIgnored,
+      signal_history: [], traceroute_history: [], ack_history: [],
+    };
+    NODES.push(n);
+  }
+  // Merge updatable fields.
+  if (ni.user.longName)  n.user.long_name  = ni.user.longName;
+  if (ni.user.shortName) n.user.short_name = ni.user.shortName;
+  if (ni.user.role !== undefined) n.user.role = roleName(ni.user.role);
+  if (ni.user.hwModel !== undefined) n.user.hw_model = hwModelName(ni.user.hwModel);
+  if (ni.user.macaddr)   n.user.macaddr    = ni.user.macaddr;
+  if (ni.user.publicKey) n.user.public_key = ni.user.publicKey;
+  n.user.is_licensed = !!ni.user.isLicensed;
+
+  if (ni.position) {
+    if (ni.position.latitudeI  !== undefined) n.position.lat_i = ni.position.latitudeI;
+    if (ni.position.longitudeI !== undefined) n.position.lon_i = ni.position.longitudeI;
+    if (ni.position.altitude   !== undefined) n.position.alt   = ni.position.altitude;
+    if (ni.position.satsInView !== undefined) n.position.sats_in_view = ni.position.satsInView;
+    if (ni.position.precisionBits !== undefined) n.position.precision_bits = ni.position.precisionBits;
+  }
+  if (ni.snr !== undefined)     pushSignalSample(n, n.rssi, ni.snr);
+  if (ni.lastHeard)             n.last_heard = formatLastHeard(ni.lastHeard);
+  if (ni.deviceMetrics) {
+    const m = ni.deviceMetrics;
+    if (m.batteryLevel       !== undefined) n.device_metrics.battery_level       = m.batteryLevel;
+    if (m.voltage            !== undefined) n.device_metrics.voltage             = (m.voltage * 1000) | 0;
+    if (m.channelUtilization !== undefined) n.device_metrics.channel_utilization = +m.channelUtilization.toFixed(1);
+    if (m.airUtilTx          !== undefined) n.device_metrics.air_util_tx         = +m.airUtilTx.toFixed(1);
+    if (m.uptimeSeconds      !== undefined) n.device_metrics.uptime_seconds      = m.uptimeSeconds;
+  }
+  if (ni.hopsAway !== undefined) n.hops_away = ni.hopsAway;
+  n.via_mqtt    = !!ni.viaMqtt;
+  if (ni.isFavorite !== undefined) n.is_favorite = !!ni.isFavorite;
+  if (ni.isIgnored  !== undefined) n.is_ignored  = !!ni.isIgnored;
+}
+
+// HardwareModel / Role enum value → display name.
+const HW_NAMES = ['UNSET','TLORA_V2','TLORA_V1','TLORA_V2_1_1P6','TBEAM','HELTEC_V2_0',
+  'TBEAM_V0P7','T_ECHO','TLORA_V1_1P3','RAK4631','HELTEC_V2_1','HELTEC_V1','LILYGO_TBEAM_S3_CORE',
+  'RAK11200','NANO_G1','TLORA_V2_1_1P8','TLORA_T3_S3','NANO_G1_EXPLORER','NANO_G2_ULTRA',
+  'LORA_TYPE','WIPHONE','WIO_WM1110','RAK2560','HELTEC_HRU_3601','STATION_G2','RAK11310',
+  'SENSELORA_RP2040','SENSELORA_S3','CANARYONE','RP2040_LORA','STATION_G1','RAK11310_DEV',
+  'TBEAM_S3_CORE','RP2040_FEATHER_RFM95','SEEED_XIAO_S3','MS24SF1','TLORA_C6','HELTEC_WIRELESS_TRACKER',
+  'HELTEC_WIRELESS_PAPER','T_DECK','T_WATCH_S3','PICOMPUTER_S3','HELTEC_HT62','EBYTE_ESP32_S3',
+  'ESP32_S3_PICO','CHATTER_2','HELTEC_WIRELESS_PAPER_V1_0','HELTEC_WIRELESS_TRACKER_V1_0',
+  'UNPHONE','TD_LORAC','MESHTASTIC_DIY_V1','NRF52_PROMICRO_DIY','RP2040_LORA_DIY',
+  'BETAFPV_2400_TX','BETAFPV_900_NANO_TX','RPI_PICO','HELTEC_WIRELESS_TRACKER_V1_1',
+  'RADIOMASTER_900_BANDIT','PORTDUINO','MOKYA_LORA'];
+const ROLE_NAMES = ['CLIENT','CLIENT_MUTE','ROUTER','ROUTER_CLIENT','REPEATER','TRACKER',
+  'SENSOR','TAK','CLIENT_HIDDEN','LOST_AND_FOUND','TAK_TRACKER'];
+
+function hwModelName(n) { return HW_NAMES[n] ?? `HW_${n ?? 0}`; }
+function roleName(n)    { return ROLE_NAMES[n] ?? 'CLIENT'; }
+function formatLastHeard(epoch) {
+  if (!epoch) return '—';
+  const dt = ((Date.now() / 1000) - epoch) | 0;
+  if (dt < 60)    return `${dt} 秒前`;
+  if (dt < 3600)  return `${(dt/60)|0} 分前`;
+  if (dt < 86400) return `${(dt/3600)|0} 小時前`;
+  return `${(dt/86400)|0} 天前`;
 }
 
 // ── Render loop ───────────────────────────────────────────────────
