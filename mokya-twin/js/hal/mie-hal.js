@@ -179,19 +179,38 @@ export class MIE_Bridge extends EventTarget {
       console.log('[MIE-DBG] press done — inputAfter=%o cand=%d pending=%o',
         inputAfter, candAfter, this._pendingCommitted);
 
-      // Stuck-state detection:OK 鍵在「有 leftover input + 無候選字 +
+      // Stuck-state recovery:OK 鍵在「有 leftover input + 無候選字 +
       // 按下後 input 完全沒變」表示 firmware ImeLogic 卡在無解狀態
-      // (key_seq 不消耗、cand_count_=0、無 multitap),user 連按 OK 都
-      // 沒進展。EMU 側自動呼叫 mie_clear_state 清空,讓 user 能重新輸入。
+      // (使用者多打了一個 phoneme 把 cand 從 N 打成 0)。User 心智模型
+      // 是「剛才明明有候選」,期望仍能選那些字。
+      // 解法:模擬連續 DEL 把多餘 phoneme 退掉,直到 cand>0 重現候選,
+      // 然後重發 OK 讓 firmware commit 當前選中候選字。等於免按 DEL 回退。
       if (keycode === KEYCODE.OK
           && this._inputBeforePress !== ''
           && candAfter === 0
           && inputAfter === this._inputBeforePress) {
-        console.warn('[MIE-DBG] OK stuck — input=%o cand=0 unchanged → mie_clear_state',
+        console.warn('[MIE-DBG] OK stuck — input=%o cand=0 → auto rollback DEL',
           inputAfter);
-        this._wasm.mie_clear_state();
-        this._dbgKey = 'clear-state(stuck)';
-        this._pollWasmState();
+        let safety = 16;
+        while (safety-- > 0) {
+          this._dbgKey = 'auto-del';
+          this._wasm.mie_key(KEYCODE.DEL, 1, this._now());
+          this._wasm.mie_key(KEYCODE.DEL, 0, this._now());
+          this._pollWasmState();
+          const inputNow = this._readWasmStr(this._wasm.mie_input_ptr());
+          const candNow  = this._wasm.mie_cand_count();
+          console.log('[MIE-DBG] auto-del — input=%o cand=%d', inputNow, candNow);
+          if (candNow > 0) {
+            // 候選回來了 → 重發 OK 讓 firmware commit 現選候選字
+            console.log('[MIE-DBG] auto-OK after rollback');
+            this._dbgKey = 'auto-ok';
+            this._wasm.mie_key(KEYCODE.OK, 1, this._now());
+            this._wasm.mie_key(KEYCODE.OK, 0, this._now());
+            this._pollWasmState();
+            break;
+          }
+          if (inputNow === '') break;   // 已退到空,放棄
+        }
       }
     } else {
       this._jsImpl.processKeyDown(keyEvent);
