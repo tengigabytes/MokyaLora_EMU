@@ -193,6 +193,16 @@ async function boot() {
     // (Screens also handle RIGHT themselves, this is a fallback)
   });
 
+  // 長按事件(對齊 doc/ui/00-design-charter.md)。
+  // 各 handler 留 PR3+ 接線(SOS / 鎖屏 / Status Bar 詳情 / CapsLock / OK 模式 B)。
+  keyboard.addEventListener('key:hold', (e) => {
+    const { key, heldMs } = e.detail;
+    addDebugEntry('key', `⏱ ${key.fn} HOLD ${heldMs}ms`);
+    if (typeof screens.handleKeyHold === 'function') {
+      screens.handleKeyHold(e.detail);
+    }
+  });
+
   // MIE composition debug
   mie.addEventListener('composition:update', (e) => {
     const d = e.detail;
