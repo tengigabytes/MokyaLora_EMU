@@ -179,38 +179,14 @@ export class MIE_Bridge extends EventTarget {
       console.log('[MIE-DBG] press done — inputAfter=%o cand=%d pending=%o',
         inputAfter, candAfter, this._pendingCommitted);
 
-      // Stuck-state recovery:OK 鍵在「有 leftover input + 無候選字 +
-      // 按下後 input 完全沒變」表示 firmware ImeLogic 卡在無解狀態
-      // (使用者多打了一個 phoneme 把 cand 從 N 打成 0)。User 心智模型
-      // 是「剛才明明有候選」,期望仍能選那些字。
-      // 解法:模擬連續 DEL 把多餘 phoneme 退掉,直到 cand>0 重現候選,
-      // 然後重發 OK 讓 firmware commit 當前選中候選字。等於免按 DEL 回退。
+      // Stuck-state log only — 偵測但不主動 recovery,讓 user 自行 DEL
+      // 處理。此 log 僅供日後 firmware 修法參考。
       if (keycode === KEYCODE.OK
           && this._inputBeforePress !== ''
           && candAfter === 0
           && inputAfter === this._inputBeforePress) {
-        console.warn('[MIE-DBG] OK stuck — input=%o cand=0 → auto rollback DEL',
+        console.warn('[MIE-DBG] OK stuck — input=%o cand=0 (firmware no-op)',
           inputAfter);
-        let safety = 16;
-        while (safety-- > 0) {
-          this._dbgKey = 'auto-del';
-          this._wasm.mie_key(KEYCODE.DEL, 1, this._now());
-          this._wasm.mie_key(KEYCODE.DEL, 0, this._now());
-          this._pollWasmState();
-          const inputNow = this._readWasmStr(this._wasm.mie_input_ptr());
-          const candNow  = this._wasm.mie_cand_count();
-          console.log('[MIE-DBG] auto-del — input=%o cand=%d', inputNow, candNow);
-          if (candNow > 0) {
-            // 候選回來了 → 重發 OK 讓 firmware commit 現選候選字
-            console.log('[MIE-DBG] auto-OK after rollback');
-            this._dbgKey = 'auto-ok';
-            this._wasm.mie_key(KEYCODE.OK, 1, this._now());
-            this._wasm.mie_key(KEYCODE.OK, 0, this._now());
-            this._pollWasmState();
-            break;
-          }
-          if (inputNow === '') break;   // 已退到空,放棄
-        }
       }
     } else {
       this._jsImpl.processKeyDown(keyEvent);
