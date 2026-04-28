@@ -125,7 +125,7 @@ export class SettingsListScreen extends BaseScreen {
     if (fn === 'DOWN') { this._sel = (this._sel + 1) % N;     this._ensureVisible(); return; }
     if (fn === 'OK') {
       if (this._fieldEdit) {
-        this._fieldEdit.setField(this._fields[this._sel], this._saveFn);
+        this._fieldEdit.setField(this._fields[this._sel], this._saveFn, this._title);
         this.goto(this._editTarget, 'slide_l');
       }
       return;
