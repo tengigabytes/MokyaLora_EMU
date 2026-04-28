@@ -86,6 +86,16 @@ export class ScreenManager {
   handleKeyTap(keyEvent) {
     if (this._current) this._current.handleKeyTap(keyEvent);
   }
+  /**
+   * 長按事件(門檻達到時觸發,key:up 之前)。
+   * 對齊 doc/ui/00-design-charter.md 鍵位語意對照表 — 長按欄位。
+   * 螢幕 override 此方法以接管特定 fn(OK / FUNC / BACK / MODE / POWER)。
+   */
+  handleKeyHold(keyEvent) {
+    if (this._current && typeof this._current.handleKeyHold === 'function') {
+      this._current.handleKeyHold(keyEvent);
+    }
+  }
 
   /** ── Transition engine ─────────────────────────────────────── */
   _playTransition(type, from, to) {
@@ -185,6 +195,8 @@ export class BaseScreen {
 
   /** Called on key:tap event */
   handleKeyTap({ key, tapCount }) { /* override */ }
+  /** 長按到達門檻時觸發。{ key, heldMs }。Override 以接管。 */
+  handleKeyHold({ key, heldMs }) { /* override */ }
 
   /** Called on key:down (immediate, before tap timer) */
   handleKeyDown({ key }) { /* override */ }

@@ -119,6 +119,25 @@ export const KEY_BY_CODE = Object.fromEntries(
   KEY_MATRIX.filter(k => k.keyCode).map(k => [k.keyCode, k])
 );
 
+/**
+ * 長按門檻(ms)— 對齊 doc/ui/00-design-charter.md 鍵位語意對照表。
+ *
+ *   OK    ≥500ms  → 模式 B 送出 / 次選操作選單
+ *   FUNC  ≥2000ms → Status Bar 詳情面板
+ *   BACK  ≥1500ms → 鎖屏
+ *   MODE  ≥800ms  → CapsLock(IME)
+ *   POWER ≥5000ms → 啟動 SOS
+ *
+ * 未列名的鍵不偵測長按(節省 timer)。
+ */
+export const HOLD_THRESHOLDS_MS = {
+  OK:    500,
+  FUNC:  2000,
+  BACK:  1500,
+  MODE:  800,
+  POWER: 5000,
+};
+
 export class KeyboardHAL extends EventTarget {
   constructor() {
     super();
@@ -132,6 +151,13 @@ export class KeyboardHAL extends EventTarget {
     this.multiTapWindowMs = 300;
     /** Debounce delay (mirrors RP2350 ~20ms) */
     this.debounceMs = 20;
+
+    /** Per-key keydown timestamp(performance.now())*/
+    this._pressStart = new Map();   // idx → timestamp
+    /** Per-key hold timer handles */
+    this._holdTimer  = new Map();   // idx → timeout id
+    /** Per-key flag:hold 已觸發,keyup 應抑制 short tap */
+    this._holdFired  = new Set();   // idx
 
     this._physicalKeyHandler = null;
   }
@@ -174,7 +200,25 @@ export class KeyboardHAL extends EventTarget {
 
     this._state[idx] = 1;
     const key = KEY_MATRIX[idx];
+    this._pressStart.set(idx, performance.now());
+    this._holdFired.delete(idx);
     this.dispatchEvent(new CustomEvent('key:down', { detail: { key } }));
+
+    // Hold timer:到門檻 dispatch 'key:hold' 並標記抑制 short tap。
+    const threshold = HOLD_THRESHOLDS_MS[key.fn];
+    if (threshold) {
+      const timer = setTimeout(() => {
+        if (this._state[idx] !== 1) return;        // 已 release
+        this._holdFired.add(idx);
+        this._holdTimer.delete(idx);
+        this.dispatchEvent(new CustomEvent('key:hold', {
+          detail: { key, heldMs: threshold }
+        }));
+        // 觸覺:長按到時較重的振動,提示使用者已達門檻
+        if (navigator.vibrate) navigator.vibrate(20);
+      }, threshold);
+      this._holdTimer.set(idx, timer);
+    }
 
     if (navigator.vibrate) navigator.vibrate(8);
   }
@@ -183,7 +227,22 @@ export class KeyboardHAL extends EventTarget {
     if (this._state[idx] === 0) return;
     this._state[idx] = 0;
     const key = KEY_MATRIX[idx];
-    this.dispatchEvent(new CustomEvent('key:up', { detail: { key } }));
+
+    // 取消未到期的 hold timer
+    const t = this._holdTimer.get(idx);
+    if (t !== undefined) {
+      clearTimeout(t);
+      this._holdTimer.delete(idx);
+    }
+    const start = this._pressStart.get(idx);
+    const heldMs = (start !== undefined) ? (performance.now() - start) | 0 : 0;
+    this._pressStart.delete(idx);
+    const wasHeld = this._holdFired.delete(idx);
+
+    this.dispatchEvent(new CustomEvent('key:up', { detail: { key, heldMs, wasHeld } }));
+
+    // Hold 已觸發 → 抑制 short tap(避免長按結束時又觸發短按語意)
+    if (wasHeld) return;
     this._registerTap(key);
   }
 
