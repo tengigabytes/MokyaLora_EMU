@@ -55,10 +55,17 @@ export class HomeScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
+    // 極簡低電模式(對齊 doc/ui/20-launcher-home.md §極簡低電模式 ≤5%)
+    const pct = this._batteryPct(now);
+    if (pct <= 5 && !this._isCharging()) {
+      this._renderLowBattery(r, pct);
+      return;
+    }
+
     // ── Status Bar ─────────────────────────────────────────────
     r.drawStatusBar({
       time:    timeStr(),
-      battery: this._batteryPct(now),
+      battery: pct,
       mesh:    this._meshCount(),
       gps:     this._gpsState(),
       unread:  this._totalUnread(),
@@ -381,6 +388,65 @@ export class HomeScreen extends BaseScreen {
 
   _batteryPct(now) {
     return 70 + ((Math.sin(now / 60000) * 10) | 0);
+  }
+
+  _isCharging() { return false; }   // 後續接 ADC + USB detect
+
+  /**
+   * 極簡低電桌面(規格 §極簡低電模式)
+   * - Status Bar 整條暗紅 alert='lowBatt'
+   * - 中央超大電量字(Unifont 16px ×3 縮放)
+   * - 電壓 / 電流 / 預估剩餘 / 座標 / SOS 提示 / 充電提示
+   * - 「Func 仍可呼出功能表」
+   * - 退出條件:充電插入 OR 電量 >10%(此處只繪;切回 normal 由 render 入口判斷)
+   */
+  _renderLowBattery(r, pct) {
+    const C = r.C;
+    // 1. Status Bar 整條暗紅
+    r.drawStatusBar({
+      alert:     'lowBatt',
+      alertText: `⚠ 電量不足                              ${pct}%`,
+    });
+
+    // 2. 超大電量字(scale 3× from Unifont 16px)
+    const ctx = r.ctx;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.scale(3, 3);
+    ctx.fillStyle    = C.DANGER;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`▣  ${pct}%`, r.W / 6, 12);   // 縮放後 baseline = 36
+    ctx.restore();
+    ctx.textAlign    = 'left';
+    ctx.textBaseline = 'alphabetic';
+
+    // 3. 電壓 / 電流 / 剩餘
+    r.drawLabel(r.W / 2, 100, '4.02V  -180mA  ~28min', {
+      font: r.F.ZH_MD, color: C.TEXT, align: 'center',
+    });
+
+    // 4. 座標
+    r.drawLabel(r.W / 2, 130, '◉ 24.149°N 120.681°E', {
+      font: r.F.ZH_MD, color: C.TEXT, align: 'center',
+    });
+
+    // 5. SOS 提示
+    r.drawLabel(r.W / 2, 160, '長按 Power 5 秒 啟動 SOS', {
+      font: r.F.ZH_SM, color: C.WARNING, align: 'center',
+    });
+
+    // 6. 充電提示
+    r.drawLabel(r.W / 2, 184, '🔌 請盡快充電', {
+      font: r.F.ZH_MD, color: C.DANGER, align: 'center',
+    });
+
+    // 7. 分隔線 + Func 仍可呼出
+    ctx.fillStyle = C.BORDER;
+    ctx.fillRect(0, 215, r.W, 1);
+    r.drawLabel(r.W / 2, 232, 'Func 仍可呼出功能表', {
+      font: r.F.ZH_SM, color: C.TEXT_DIM, align: 'center',
+    });
   }
 }
 

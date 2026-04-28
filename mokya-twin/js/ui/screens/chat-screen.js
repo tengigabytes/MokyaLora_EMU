@@ -141,6 +141,11 @@ export class ChatScreen extends BaseScreen {
 
   _onEnterAction = (e) => {
     const text = (e.detail.text ?? '').trim();
+    this._sendBuffer(text);
+  };
+
+  /** 共用送出路徑(模式 B 長按 OK 或 MIE action:enter 都會走這裡)。 */
+  _sendBuffer(text) {
     if (!text) return;
     const msg = {
       id:   Date.now(),
@@ -152,6 +157,7 @@ export class ChatScreen extends BaseScreen {
     this._messages.push(msg);
     this._scrollY = 9999;
     this._compState.committed = '';
+    this._compState.pending   = { str: '', matchedPrefixBytes: 0, style: 0 };
     // 送出後清除該對象的草稿(規格 §草稿生命週期)
     clearDraft(this._draftId());
     this._draftBanner = null;
@@ -160,7 +166,7 @@ export class ChatScreen extends BaseScreen {
       ? { to: this._conversation.id, wantAck: true }
       : { channel: this._conversation.id ?? 0 };
     this.serial.sendTextMessage(text, opts);
-  };
+  }
 
   _onSerialMessage = (e) => {
     const msg = e.detail.message;
@@ -341,24 +347,26 @@ export class ChatScreen extends BaseScreen {
   }
 
   /**
-   * 長按事件(對齊 doc/ui/12-ime.md):
-   *   MODE 長按 → CapsLock
-   *   OK   長按 → 模式 B 送出(目前轉發給 MIE 由其決定 commit / send)
-   *   BACK 長按 → 鎖屏(暫由 console 觀察,鎖屏螢幕未實作)
+   * 長按事件(對齊 doc/ui/12-ime.md 鍵位行為表 模式 B):
+   *   OK   長按 ≥500ms → 送出 → 回 App
+   *   MODE 長按        → CapsLock(IME)
+   *   BACK 長按        → 鎖屏(由全域路由處理,此處不接)
    */
   handleKeyHold({ key }) {
     if (key.fn === 'MODE') {
-      const on = this.mie.toggleCapsLock?.();
-      console.log('[Chat] CapsLock', on ? 'ON' : 'OFF');
+      this.mie.toggleCapsLock?.();
       return;
     }
     if (key.fn === 'OK') {
-      // 模式 B:長按 OK = 送出。MIE 已有 send 路徑;此處只觸發即可。
-      this.mie.processKeyTap?.({ key, tapCount: 1, longPress: true });
-      return;
-    }
-    if (key.fn === 'BACK') {
-      console.log('[Chat] BACK long-press → 鎖屏(尚未實作)');
+      // 模式 B:長按 = 直接送出當前 buffer;優先把 MIE 仍在 preedit 中的
+      // 字 commit 進 _compState.committed(processKeyTap OK 完成 candidate),
+      // 再把 committed 整段送出。
+      const pending = this._compState.pending?.str ?? '';
+      if (pending.length > 0) {
+        this.mie.processKeyTap({ key, tapCount: 1 });
+      }
+      const text = (this._compState.committed ?? '').trim();
+      if (text) this._sendBuffer(text);
       return;
     }
   }
@@ -378,6 +386,15 @@ export class ChatScreen extends BaseScreen {
     if (key.fn === 'BACK' && !hasComp) { this.goBack(); return; }
     if (key.fn === 'UP'   && !hasComp) { this._scrollY = Math.max(0, this._scrollY - 30); return; }
     if (key.fn === 'DOWN' && !hasComp) { this._scrollY = Math.min(this._maxScroll, this._scrollY + 30); return; }
+    // 模式 B 短按 OK = 換行(對齊 12-ime.md 鍵位行為表)。長按由
+    // handleKeyHold 處理為送出;若有 IME 候選字則交給 MIE commit candidate。
+    if (key.fn === 'OK' && !hasComp) {
+      const cur = this._compState.committed ?? '';
+      if (cur.length > 0) {
+        this._compState.committed = cur + '\n';
+      }
+      return;  // 不轉發給 MIE,避免空 buffer + OK 觸發 action:enter 立即送出
+    }
     // Forward everything (including LEFT/RIGHT/UP/DOWN during composition) to MIE
     this.mie.processKeyTap({ key, tapCount });
   }
