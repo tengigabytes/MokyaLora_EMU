@@ -120,22 +120,34 @@ export class ChatScreen extends BaseScreen {
       matchedPrefixBytes: 0,
       style:              rawBuf && rawBuf.length ? 1 : 0,
     };
+    // Stray space filter:WASM firmware 在 OK 鍵 commit 候選字後可能會在
+    // committed 累積字串末尾追加一個 ASCII 空格(stray)。SPACE 鍵的空格
+    // 不走這條路徑(SPACE 直接被 firmware 處理為「一聲/literal space」走
+    // composition:commit channel,但 lastUserKeyFn 會是 'SPACE'),所以僅
+    // 在「最近一次按鍵是 OK」時去掉末尾 ASCII 空格。
+    let committedRaw = d.committed ?? '';
+    if (this._lastUserKeyFn === 'OK' && committedRaw.endsWith(' ')) {
+      committedRaw = committedRaw.replace(/ +$/, '');
+    }
     this._compState = {
       pending,
       candidates:    d.candidates ?? [],
       allCandidates: d.allCandidates ?? d.candidates ?? [],
       selectedAbs:   d.selectedAbs ?? d.sel ?? this.mie._jsImpl?.candidateIdx ?? 0,
       selIdx:        d.sel ?? 0,
-      committed:     d.committed ?? '',
+      committed:     committedRaw,
       picker:        d.picker ?? { active: false, cells: [], cols: 0, selected: 0 },
     };
   };
 
   // WASM mode: each committed character arrives here; accumulate in compState
   _onCompositionCommit = (e) => {
+    const text = e.detail.text ?? '';
+    // 過濾 OK 後的 stray ASCII 空格 commit(同 _onCompositionUpdate 註解)。
+    if (text === ' ' && this._lastUserKeyFn === 'OK') return;
     this._compState = {
       ...this._compState,
-      committed: (this._compState.committed ?? '') + (e.detail.text ?? ''),
+      committed: (this._compState.committed ?? '') + text,
     };
   };
 
@@ -476,6 +488,11 @@ export class ChatScreen extends BaseScreen {
   }
 
   handleKeyDown({ key }) {
+    // 追蹤最近一次按鍵 fn 名,供 _onCompositionCommit/Update 過濾 stray
+    // space(WASM 在 OK 後會 emit 一個 ASCII 空格 commit;若按 SPACE 鍵,
+    // 此值會是 'SPACE',讓真正的空格通過)。
+    this._lastUserKeyFn = key.fn;
+
     // Width-packed candidate paging: UP/DOWN flip the renderer's display-page
     // and snap firmware's selection to the new page's first slot. Only kicks
     // in when there are candidates and more than one display-page; otherwise

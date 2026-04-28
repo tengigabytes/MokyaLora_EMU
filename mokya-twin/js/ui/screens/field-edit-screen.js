@@ -41,7 +41,10 @@ export class FieldEditScreen extends BaseScreen {
     // String-mode MIE handlers (bound once, attached per onEnter).
     this._onCommit = (e) => {
       if (this._field?.type !== 'string') return;
-      this._draft = (this._draft ?? '') + (e.detail.text ?? '');
+      const text = e.detail.text ?? '';
+      // 過濾 OK 後的 stray ASCII 空格 commit(同 chat-screen 處理)
+      if (text === ' ' && this._lastUserKeyFn === 'OK') return;
+      this._draft = (this._draft ?? '') + text;
     };
     this._onDelete = () => {
       if (this._field?.type !== 'string') return;
@@ -550,6 +553,7 @@ export class FieldEditScreen extends BaseScreen {
   }
 
   handleKeyDown({ key }) {
+    this._lastUserKeyFn = key.fn;
     if (this._field?.type === 'string') {
       this.mie.processKeyDown({ key });
     }
