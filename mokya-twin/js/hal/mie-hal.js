@@ -161,20 +161,12 @@ export class MIE_Bridge extends EventTarget {
   processKeyDown(keyEvent) {
     if (this._useWasm && this._wasm) {
       const keycode = keyEvent.key.keycode;
-      // Capture pending buffer before the press so the release edge can
-      // detect OK-with-empty-composition.
+      // Capture pending buffer before the press so we can decide later if
+      // OK was a candidate confirm(input was non-empty)or a send action
+      //(input was empty)。
       this._inputBeforePress = this._readWasmStr(this._wasm.mie_input_ptr());
       this._wasm.mie_key(keycode, 1, this._now());
       this._pollWasmState();
-      // 偵測 OK press 是否完成了候選字 commit:
-      //   pressed: input 非空(有 pending phonemes) → 釋放後 input 變空
-      //   表示候選字已被 press 邊 confirm,release edge 不需再送 WASM
-      //   (firmware OK release 在無 input 時會 emit 一個 stray space commit,
-      //   會被 _onCompositionCommit 加進 chat 的 committed,造成「OK 變空格」)
-      this._okCommittedOnPress =
-        (keycode === KEYCODE.OK)
-        && this._inputBeforePress !== ''
-        && this._readWasmStr(this._wasm.mie_input_ptr()) === '';
     } else {
       this._jsImpl.processKeyDown(keyEvent);
     }
@@ -182,25 +174,37 @@ export class MIE_Bridge extends EventTarget {
 
   /**
    * Process key-up (release edge).
+   *
+   * OK 鍵特殊處理:**完全跳過 release edge 的 mie_key 呼叫**。
+   * Firmware ImeLogic 在 OK release(input 已空)時會 emit 一個 stray
+   * space commit,污染 chat 的 _compState.committed,造成「OK 變空格」。
+   * Press edge 已完成所有實際工作(候選字 confirm 或無動作),release
+   * 只負責 JS 端的 action:enter 派發(when input was empty at press)。
+   *
+   * 對齊 12-ime.md OK 行為:
+   *   有候選字(press 時 input 非空) → 確認候選 → release 不做事
+   *   無候選(press 時 input 空)     → release 觸發 action:enter 送出
+   *   完全空 buffer + 沒累積 commit  → action:enter 帶空字串(送出端忽略)
+   *
    * @param {{ key: { keycode: number }, tapCount: number }} keyEvent
    */
   processKeyTap(keyEvent) {
     if (this._useWasm && this._wasm) {
       const keycode = keyEvent.key.keycode;
-      // Suppress OK release after a press-edge candidate commit(避免
-      // firmware emit stray space)。此 flag 由 processKeyDown 設定。
-      const skipRelease = (keycode === KEYCODE.OK) && this._okCommittedOnPress;
-      this._okCommittedOnPress = false;
-      if (!skipRelease) {
+      const isOk    = (keycode === KEYCODE.OK);
+
+      // OK 跳過 WASM release edge,避免 stray space commit
+      if (!isOk) {
         this._wasm.mie_key(keycode, 0, this._now());
         this._pollWasmState();
       }
-      // OK with no pending composition → send accumulated committed text.
-      if (keycode === KEYCODE.OK && this._inputBeforePress === '' && !skipRelease) {
+
+      // OK 在 press 時 input 為空 → 視為「送出已累積文字」
+      if (isOk && this._inputBeforePress === '') {
         this._emit('action:enter', { text: this._pendingCommitted });
         this._pendingCommitted = '';
-        // Resync firmware: next message starts a fresh sentence (cap first
-        // word, no leading space).
+        // Resync firmware: next message starts a fresh sentence(cap first
+        // word, no leading space)
         this.setTextContext('');
       }
       this._inputBeforePress = '';

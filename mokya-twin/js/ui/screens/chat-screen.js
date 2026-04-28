@@ -144,7 +144,7 @@ export class ChatScreen extends BaseScreen {
     this._sendBuffer(text);
   };
 
-  /** 共用送出路徑(模式 B 長按 OK 或 MIE action:enter 都會走這裡)。 */
+  /** 訊息送出 — MIE action:enter 觸發(OK 在無候選字 + 無 pending 時)。 */
   _sendBuffer(text) {
     if (!text) return;
     const msg = {
@@ -347,26 +347,20 @@ export class ChatScreen extends BaseScreen {
   }
 
   /**
-   * 長按事件(對齊 doc/ui/12-ime.md 鍵位行為表 模式 B):
-   *   OK   長按 ≥500ms → 送出 → 回 App
-   *   MODE 長按        → CapsLock(IME)
-   *   BACK 長按        → 鎖屏(由全域路由處理,此處不接)
+   * 長按事件(對齊 doc/ui/12-ime.md 鍵位行為表):
+   *   MODE 長按 → CapsLock(IME)
+   *   BACK 長按 → 鎖屏(由全域路由處理,此處不接)
+   *
+   * OK 不分長/短按 — 統一走 MIE 原始邏輯(短按 / 任意長度按):
+   *   有候選字 → 確認候選字
+   *   無候選   → action:enter → _sendBuffer 送出
+   * 規格 12-ime.md「模式 B 短按換行 / 長按送出」差異化暫不實作 — chat
+   * 輸入框是單列 inline,換行視覺無意義;且雙路徑容易出現 stray space
+   * 等 firmware 行為差異。
    */
   handleKeyHold({ key }) {
     if (key.fn === 'MODE') {
       this.mie.toggleCapsLock?.();
-      return;
-    }
-    if (key.fn === 'OK') {
-      // 模式 B:長按 = 直接送出當前 buffer;優先把 MIE 仍在 preedit 中的
-      // 字 commit 進 _compState.committed(processKeyTap OK 完成 candidate),
-      // 再把 committed 整段送出。
-      const pending = this._compState.pending?.str ?? '';
-      if (pending.length > 0) {
-        this.mie.processKeyTap({ key, tapCount: 1 });
-      }
-      const text = (this._compState.committed ?? '').trim();
-      if (text) this._sendBuffer(text);
       return;
     }
   }
