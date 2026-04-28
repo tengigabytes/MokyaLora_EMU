@@ -166,6 +166,15 @@ export class MIE_Bridge extends EventTarget {
       this._inputBeforePress = this._readWasmStr(this._wasm.mie_input_ptr());
       this._wasm.mie_key(keycode, 1, this._now());
       this._pollWasmState();
+      // 偵測 OK press 是否完成了候選字 commit:
+      //   pressed: input 非空(有 pending phonemes) → 釋放後 input 變空
+      //   表示候選字已被 press 邊 confirm,release edge 不需再送 WASM
+      //   (firmware OK release 在無 input 時會 emit 一個 stray space commit,
+      //   會被 _onCompositionCommit 加進 chat 的 committed,造成「OK 變空格」)
+      this._okCommittedOnPress =
+        (keycode === KEYCODE.OK)
+        && this._inputBeforePress !== ''
+        && this._readWasmStr(this._wasm.mie_input_ptr()) === '';
     } else {
       this._jsImpl.processKeyDown(keyEvent);
     }
@@ -178,10 +187,16 @@ export class MIE_Bridge extends EventTarget {
   processKeyTap(keyEvent) {
     if (this._useWasm && this._wasm) {
       const keycode = keyEvent.key.keycode;
-      this._wasm.mie_key(keycode, 0, this._now());
-      this._pollWasmState();
+      // Suppress OK release after a press-edge candidate commit(避免
+      // firmware emit stray space)。此 flag 由 processKeyDown 設定。
+      const skipRelease = (keycode === KEYCODE.OK) && this._okCommittedOnPress;
+      this._okCommittedOnPress = false;
+      if (!skipRelease) {
+        this._wasm.mie_key(keycode, 0, this._now());
+        this._pollWasmState();
+      }
       // OK with no pending composition → send accumulated committed text.
-      if (keycode === KEYCODE.OK && this._inputBeforePress === '') {
+      if (keycode === KEYCODE.OK && this._inputBeforePress === '' && !skipRelease) {
         this._emit('action:enter', { text: this._pendingCommitted });
         this._pendingCommitted = '';
         // Resync firmware: next message starts a fresh sentence (cap first
