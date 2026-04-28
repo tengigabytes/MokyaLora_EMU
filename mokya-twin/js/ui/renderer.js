@@ -132,23 +132,12 @@ export class MokyaRenderer {
   /**
    * 9 元素全域常駐 Status Bar(對齊 doc/ui/10-status-bar.md v2.0)。
    *
-   * 字位佈局(8px 半形 Unifont):
-   *   時間 0–40, TX/RX 48–64, ⚠ 64–72, ●Mesh 80–136,
-   *   GPS 144–176, ✉ 184–208, 電量 216–256, 模式 288–304
+   * 規格的 x 字位表假設等寬 8px 半形字位,但實際 Unifont 渲染下
+   * `●▲▼⚠✉▣◌✕○⚡` 等符號是 16px 全形,直接套用會重疊。本實作改以
+   * measureText 動態量測:左半從 x=0 順序排列(時間→TX/RX→警告→Mesh
+   * →GPS→未讀),右半從 x=W 反向排列(模式←電量),兩側中間留空。
    *
-   * @param {object} opts
-   * @param {string} opts.time         "HH:MM"(已格式化)
-   * @param {number} opts.battery      0–100
-   * @param {boolean} opts.charging    true → 充電中
-   * @param {string}  [opts.mode='Op'] Op | 注 | EN | Ab | Num
-   * @param {number}  [opts.mesh=0]    鄰居節點數
-   * @param {string}  [opts.gps='off'] '3d'|'2d'|'searching'|'lost'|'off'
-   * @param {number}  [opts.unread=0]  未讀訊息總數
-   * @param {boolean} [opts.warn=false] 系統警告燈
-   * @param {boolean} [opts.tx=false]  TX 動作中(100ms 脈衝)
-   * @param {boolean} [opts.rx=false]  RX 動作中(100ms 脈衝)
-   * @param {string}  [opts.alert]     'sos' | 'sosRecv' | 'lowBatt' | undefined
-   * @param {string}  [opts.alertText] 整條覆蓋文字(配合 alert)
+   * @param {object} opts(欄位同前)
    */
   drawStatusBar(opts = {}) {
     const {
@@ -158,63 +147,75 @@ export class MokyaRenderer {
     } = opts;
     const y = 0, h = 16;
     const C = this.C;
+    const ctx = this.ctx;
 
     // ── 警告態整條覆蓋(優先序:sos > sosRecv > lowBatt > 正常) ──
     if (alert === 'sos' || alert === 'sosRecv' || alert === 'lowBatt') {
       const bg = alert === 'lowBatt' ? C.ALERT_BG_WARN : C.ALERT_BG_CRIT;
-      this.ctx.fillStyle = bg;
-      this.ctx.fillRect(0, y, this.W, h);
-      this.ctx.fillStyle = C.TEXT;
-      this.ctx.textBaseline = 'top';
-      this.ctx.textAlign = 'left';
-      this.ctx.fillText(alertText || (alert === 'sos' ? '🚨 SOS 廣播中' : '⚠ 警告'), 4, y);
-      this.ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, y, this.W, h);
+      ctx.fillStyle = C.TEXT;
+      ctx.textBaseline = 'top';
+      ctx.textAlign = 'left';
+      ctx.fillText(alertText || (alert === 'sos' ? '🚨 SOS 廣播中' : '⚠ 警告'), 4, y);
+      ctx.textBaseline = 'alphabetic';
       return;
     }
 
     // 一般態
-    this.ctx.fillStyle = C.BG;
-    this.ctx.fillRect(0, y, this.W, h);
-    this.ctx.fillStyle = C.BORDER;
-    this.ctx.fillRect(0, h, this.W, 1);
+    ctx.fillStyle = C.BG;
+    ctx.fillRect(0, y, this.W, h);
+    ctx.fillStyle = C.BORDER;
+    ctx.fillRect(0, h, this.W, 1);
 
-    this.ctx.textBaseline = 'top';
-    this.ctx.textAlign    = 'left';
+    ctx.textBaseline = 'top';
+    ctx.textAlign    = 'left';
+    ctx.font         = this.F.SM;
 
-    // 1. 時間 x=0..40
-    this.ctx.fillStyle = C.TEXT;
-    this.ctx.fillText(time, 0, y);
+    // 動態量測 + 推進的 helper
+    const drawAt = (x, str, color) => {
+      ctx.fillStyle = color;
+      ctx.fillText(str, x, y);
+      return x + ctx.measureText(str).width;
+    };
+    const GAP_S = 4;   // 元素間小間距
+    const GAP_M = 8;   // 區段間中間距
 
-    // 2. TX/RX 動作燈 x=48..64
-    this.ctx.fillStyle = tx ? C.FOCUS : C.SURFACE3;
-    this.ctx.fillText('▲', 48, y);
-    this.ctx.fillStyle = rx ? C.GREEN : C.SURFACE3;
-    this.ctx.fillText('▼', 56, y);
+    // ── 左半:時間 → TX/RX → ⚠ → ●Mesh:N → ●GPS → ✉N ──────────
+    let lx = 0;
 
-    // 3. 警告燈 x=64..72(條件,位置永遠保留)
+    // 1. 時間
+    lx = drawAt(lx, time, C.TEXT);
+    lx += GAP_M;
+
+    // 2. TX/RX 動作燈
+    lx = drawAt(lx, '▲', tx ? C.FOCUS : C.SURFACE3);
+    lx = drawAt(lx, '▼', rx ? C.GREEN : C.SURFACE3);
+    lx += GAP_S;
+
+    // 3. 警告燈(條件;位置不保留以節省空間)
     if (warn) {
-      this.ctx.fillStyle = C.WARNING;
-      this.ctx.fillText('⚠', 64, y);
+      lx = drawAt(lx, '⚠', C.WARNING);
+      lx += GAP_S;
     }
 
-    // 4. 鄰居節點 x=80..136
+    // 4. 鄰居節點 ●Mesh:N
     {
       const meshAge = (typeof mesh === 'object') ? mesh.lastHeardSec : null;
       const meshN   = (typeof mesh === 'object') ? (mesh.count | 0)  : (mesh | 0);
       let dotColor = C.TEXT_MUTED;
       if (meshN >= 1) {
-        if (meshAge === null || meshAge < 300)        dotColor = C.GREEN;
-        else if (meshAge < 900)                       dotColor = C.WARNING;
-        else                                          dotColor = C.DANGER;
+        if (meshAge === null || meshAge < 300)   dotColor = C.GREEN;
+        else if (meshAge < 900)                  dotColor = C.WARNING;
+        else                                     dotColor = C.DANGER;
       }
-      this.ctx.fillStyle = dotColor;
-      this.ctx.fillText('●', 80, y);
-      this.ctx.fillStyle = C.TEXT;
+      lx = drawAt(lx, '●', dotColor);
       const meshStr = meshN > 99 ? '99+' : String(meshN);
-      this.ctx.fillText('Mesh:' + meshStr, 88, y);
+      lx = drawAt(lx, 'Mesh:' + meshStr, C.TEXT);
+      lx += GAP_M;
     }
 
-    // 5. GPS x=144..176
+    // 5. GPS
     {
       const map = {
         '3d':        { glyph: '●', color: C.GREEN     },
@@ -224,41 +225,50 @@ export class MokyaRenderer {
         'off':       { glyph: '○', color: C.TEXT_MUTED },
       };
       const g = map[gps] || map.off;
-      this.ctx.fillStyle = g.color;
-      this.ctx.fillText(g.glyph, 144, y);
-      this.ctx.fillStyle = (gps === '3d' || gps === '2d') ? C.TEXT : C.TEXT_DIM;
-      this.ctx.fillText('GPS', 152, y);
+      lx = drawAt(lx, g.glyph, g.color);
+      lx = drawAt(lx, 'GPS', (gps === '3d' || gps === '2d') ? C.TEXT : C.TEXT_DIM);
+      lx += GAP_M;
     }
 
-    // 6. 未讀訊息 x=184..208(條件)
+    // 6. 未讀訊息(條件)
     if (unread > 0) {
-      this.ctx.fillStyle = C.GREEN;
-      this.ctx.fillText('✉', 184, y);
-      this.ctx.fillStyle = C.GREEN;
-      this.ctx.fillText(unread > 9 ? '9+' : String(unread), 192, y);
+      lx = drawAt(lx, '✉', C.GREEN);
+      lx = drawAt(lx, unread > 9 ? '9+' : String(unread), C.GREEN);
+      lx += GAP_S;
     }
 
-    // 7. 電量 x=216..256
-    {
-      let batColor = C.TEXT;
-      if (battery <= 5)        batColor = C.DANGER;
-      else if (battery <= 15)  batColor = C.DANGER;
-      else if (battery <= 30)  batColor = C.WARNING;
-      const glyph = charging ? '⚡' : (battery >= 99 ? '▪' : '▣');
-      this.ctx.fillStyle = batColor;
-      this.ctx.fillText(glyph, 216, y);
-      const pctStr = Math.max(0, Math.min(100, battery | 0)) + '%';
-      this.ctx.fillText(pctStr, 224, y);
-    }
+    // ── 右半:從右往左排(模式 → 電量) ──────────────────────────
+    const drawAtRight = (rx_, str, color) => {
+      const w = ctx.measureText(str).width;
+      ctx.fillStyle = color;
+      ctx.fillText(str, rx_ - w, y);
+      return rx_ - w;
+    };
 
-    // 8. 模式 x=288..304
+    let rxEdge = this.W - 4;
+
+    // 8. 模式(最右)
     {
       const isIme = (mode !== 'Op');
-      this.ctx.fillStyle = isIme ? C.FOCUS : C.TEXT;
-      this.ctx.fillText(mode, 288, y);
+      rxEdge = drawAtRight(rxEdge, mode, isIme ? C.FOCUS : C.TEXT);
+      rxEdge -= GAP_M;
     }
 
-    this.ctx.textBaseline = 'alphabetic';
+    // 7. 電量(模式左側)
+    {
+      let batColor = C.TEXT;
+      if (battery <= 15)       batColor = C.DANGER;
+      else if (battery <= 30)  batColor = C.WARNING;
+      const glyph  = charging ? '⚡' : (battery >= 99 ? '▪' : '▣');
+      const pctStr = Math.max(0, Math.min(100, battery | 0)) + '%';
+      rxEdge = drawAtRight(rxEdge, pctStr, batColor);
+      rxEdge = drawAtRight(rxEdge, glyph, batColor);
+    }
+
+    // 防呆:左半若擠到右半,右半已先繪,左半於前面繪完(自然在右半文字之上)。
+    // 由於兩側獨立,實務上中間留白即可,過度時最右側元素優先保留(模式/電量)。
+
+    ctx.textBaseline = 'alphabetic';
   }
 
   // ── Hint Bar (y: H-16, h: 16) — G-2 動態鍵位提示 ────────────
