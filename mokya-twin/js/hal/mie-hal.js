@@ -161,11 +161,23 @@ export class MIE_Bridge extends EventTarget {
   processKeyDown(keyEvent) {
     if (this._useWasm && this._wasm) {
       const keycode = keyEvent.key.keycode;
+      const fn = keyEvent.key.fn;
+      const mode = this._readWasmStr(this._wasm.mie_mode_ptr());
       // Capture pending buffer before the press so the release edge can
       // detect OK-with-empty-composition.
       this._inputBeforePress = this._readWasmStr(this._wasm.mie_input_ptr());
+      const candCount = this._wasm.mie_cand_count();
+      const sel       = this._wasm.mie_sel();
+      console.log('[MIE-DBG] press fn=%s kc=0x%s mode=%s inputBefore=%o pending=%o cand=%d sel=%d',
+        fn, keycode.toString(16).padStart(2,'0'), mode,
+        this._inputBeforePress, this._pendingCommitted, candCount, sel);
+      this._dbgKey = `press(${fn})`;
       this._wasm.mie_key(keycode, 1, this._now());
       this._pollWasmState();
+      const inputAfter = this._readWasmStr(this._wasm.mie_input_ptr());
+      const candAfter  = this._wasm.mie_cand_count();
+      console.log('[MIE-DBG] press done — inputAfter=%o cand=%d pending=%o',
+        inputAfter, candAfter, this._pendingCommitted);
     } else {
       this._jsImpl.processKeyDown(keyEvent);
     }
@@ -178,10 +190,16 @@ export class MIE_Bridge extends EventTarget {
   processKeyTap(keyEvent) {
     if (this._useWasm && this._wasm) {
       const keycode = keyEvent.key.keycode;
+      const fn = keyEvent.key.fn;
+      console.log('[MIE-DBG] release fn=%s kc=0x%s inputBeforePress=%o',
+        fn, keycode.toString(16).padStart(2,'0'), this._inputBeforePress);
+      this._dbgKey = `release(${fn})`;
       this._wasm.mie_key(keycode, 0, this._now());
       this._pollWasmState();
       // OK with no pending composition → send accumulated committed text.
       if (keycode === KEYCODE.OK && this._inputBeforePress === '') {
+        console.log('[MIE-DBG] OK release with empty input → action:enter text=%o',
+          this._pendingCommitted);
         this._emit('action:enter', { text: this._pendingCommitted });
         this._pendingCommitted = '';
         // Resync firmware: next message starts a fresh sentence (cap first
@@ -642,14 +660,14 @@ export class MIE_Bridge extends EventTarget {
     if (n > 0) {
       committedNow = this._readWasmStr(commitPtr);
 
-      // Firmware bug workaround:在 SmartZh + 累積無效 multitap pending +
-      // 連續按 OK 的情境下,firmware 會 emit 單一 '\n' (0x0A) 字元 commit
-      // (key_seq 不消耗,推測 candidates_[selected_] 越界讀到 0x0A memory)。
-      // '\n' 在訊息上下文無語意,EMU 也不支援單列換行;Unifont 對 '\n' 無
-      // glyph 會 fallback 渲染成類似空格,使用者誤判為「OK 變空格」。
-      // 直接 swallow '\n' / '\r' 單字元 commit;TAB ('\t') 是合法 TAB 鍵
-      // 輸入,保留。詳見 firmware/mie/src/ime_logic.cpp 待修。
-      if (committedNow !== '\n' && committedNow !== '\r') {
+      // Firmware bug workaround:詳見 firmware/mie/src/ime_logic.cpp 待修
+      const isStray = (committedNow === '\n' || committedNow === '\r');
+      console.log('[MIE-DBG] commit n=%d text=%o%s ctx=%s pendingAfter=%o',
+        n, committedNow,
+        isStray ? ' ⚠️STRAY-suppressed' : '',
+        this._dbgKey ?? '?',
+        isStray ? this._pendingCommitted : (this._pendingCommitted ?? '') + committedNow);
+      if (!isStray) {
         this._pendingCommitted = (this._pendingCommitted ?? '') + committedNow;
         this.dispatchEvent(new CustomEvent('composition:commit', { detail: { text: committedNow } }));
         // Firmware's LruCache mutates on SmartZh candidate commits — schedule
