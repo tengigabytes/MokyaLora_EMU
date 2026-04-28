@@ -171,6 +171,9 @@ async function boot() {
   screens.register('sos',           new SOSScreen(renderer, mie, serial));
   screens.register('lock',          new LockScreen(renderer, mie, serial));
 
+  // L-1 九宮格的尚未細部規劃 App,以 placeholder 接住(對齊 doc/ui/01-page-architecture.md)
+  screens.register('tools',     new PlaceholderScreen(renderer, mie, serial, '工具 (T-0)'));
+
   // 啟動時清掉超過 30 天的草稿(規格 §草稿生命週期)
   cleanupOlderDays(30);
 

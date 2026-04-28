@@ -79,11 +79,19 @@ export class ChatScreen extends BaseScreen {
     if (simMsgs.length > INITIAL_MESSAGES.length) {
       this._messages = simMsgs.slice(-50);
     }
-    // 草稿恢復:若該對象有未送草稿,顯示提示列(完整恢復對話框留 PR6)。
+    // 草稿恢復對話框(規格 12-ime.md §草稿恢復畫面):進入時若有草稿,
+    // 顯示「[繼續編輯][重新開始]」二選一。OK 在「繼續」=保留草稿、
+    // 「重新開始」=清除草稿;BACK 不進編輯,回上層。
     const draft = getDraft(this._draftId());
-    this._draftBanner = draft
-      ? { text: draft.text, age: humanAge((Date.now() / 1000 | 0) - draft.savedAt) }
-      : null;
+    if (draft) {
+      this._recovery = {
+        text:  draft.text,
+        age:   humanAge(((Date.now() / 1000) | 0) - draft.savedAt),
+        focus: 0,   // 0=繼續編輯、1=重新開始
+      };
+    } else {
+      this._recovery = null;
+    }
   }
 
   onLeave(toScreen) {
@@ -171,6 +179,13 @@ export class ChatScreen extends BaseScreen {
 
   render(now) {
     const r = this.r;
+
+    // 草稿恢復對話框(在 chat 畫面繪完之上完整覆蓋)
+    if (this._recovery) {
+      this._renderRecovery(r);
+      return;
+    }
+
     const STATUS_BTM = 18;
     const HDR_H      = 16;          // conversation context bar
     const CONTENT_TOP = STATUS_BTM + HDR_H;
@@ -303,6 +318,12 @@ export class ChatScreen extends BaseScreen {
   }
 
   handleKeyTap({ key, tapCount }) {
+    // 草稿恢復對話框攔截鍵位
+    if (this._recovery) {
+      this._handleRecoveryKey(key);
+      return;
+    }
+
     // Only scroll with UP/DOWN when no active composition and no picker overlay
     // (buffer empty, no candidates, picker closed).
     const pendingLen = (this._compState.pending?.str ?? '').length;
@@ -313,6 +334,90 @@ export class ChatScreen extends BaseScreen {
     if (key.fn === 'DOWN' && !hasComp) { this._scrollY = Math.min(this._maxScroll, this._scrollY + 30); return; }
     // Forward everything (including LEFT/RIGHT/UP/DOWN during composition) to MIE
     this.mie.processKeyTap({ key, tapCount });
+  }
+
+  /** 草稿恢復對話框(規格 12-ime.md §草稿恢復畫面)。 */
+  _renderRecovery(r) {
+    r.clear();
+    const C = r.C;
+
+    r.drawStatusBar({
+      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
+      battery: this._fakeBattery(performance.now()),
+    });
+
+    // 標題
+    r.drawLabel(r.W / 2, 32, this._conversation.name, {
+      font: r.F.ZH_MD, color: C.TEXT, align: 'center',
+    });
+    r.ctx.fillStyle = C.BORDER;
+    r.ctx.fillRect(0, 42, r.W, 1);
+
+    r.drawLabel(r.W / 2, 70, '發現未完成的草稿', {
+      font: r.F.ZH_MD, color: C.TEXT, align: 'center',
+    });
+
+    // 草稿預覽(框 + 截斷文字)
+    const preview = truncatePreview(this._recovery.text, 32);
+    r.drawCard(20, 90, r.W - 40, 50, {
+      radius: 6, bg: C.SURFACE, border: C.BORDER,
+    });
+    r.drawLabel(r.W / 2, 110, `「${preview}」`, {
+      font: r.F.ZH_SM, color: C.FOCUS, align: 'center', maxWidth: r.W - 60,
+    });
+    r.drawLabel(r.W / 2, 132, `建立於 ${this._recovery.age}`, {
+      font: r.F.ZH_SM, color: C.TEXT_DIM, align: 'center',
+    });
+
+    // 按鈕(◀▶ 切換,OK 確認)
+    const btnY = 168;
+    const btnW = 110, btnH = 30, gap = 12;
+    const totalW = btnW * 2 + gap;
+    const x0 = (r.W - totalW) / 2;
+    const items = [
+      { label: '繼續編輯', x: x0 },
+      { label: '重新開始', x: x0 + btnW + gap },
+    ];
+    items.forEach((it, i) => {
+      const isSel = (this._recovery.focus === i);
+      r.drawCard(it.x, btnY, btnW, btnH, {
+        radius: 6,
+        bg:     isSel ? C.FOCUS_BG : C.SURFACE,
+        border: isSel ? C.FOCUS    : C.BORDER,
+      });
+      const label = isSel ? `▶ ${it.label}` : it.label;
+      r.drawLabel(it.x + btnW / 2, btnY + btnH / 2 + 6, label, {
+        font: r.F.ZH_MD, color: isSel ? C.FOCUS : C.TEXT, align: 'center',
+      });
+    });
+
+    // 底部提示
+    r.drawLabel(r.W / 2, 218, '◀▶ 切換  OK 確認  BCK 取消', {
+      font: r.F.ZH_SM, color: C.TEXT_DIM, align: 'center',
+    });
+  }
+
+  _handleRecoveryKey(key) {
+    if (!this._recovery) return;
+    if (key.fn === 'LEFT')  { this._recovery.focus = 0; return; }
+    if (key.fn === 'RIGHT') { this._recovery.focus = 1; return; }
+    if (key.fn === 'BACK') {
+      // 規格:BACK = 不進編輯,回上層;草稿保留
+      this._recovery = null;
+      this.goBack();
+      return;
+    }
+    if (key.fn === 'OK') {
+      if (this._recovery.focus === 1) {
+        // 重新開始 → 清草稿
+        clearDraft(this._draftId());
+      }
+      // 「繼續編輯」 → 草稿留著(下次離開若 buffer 空,onLeave 不會覆寫;
+      //                  若新輸入則 onLeave 會以新 buffer 覆寫)。
+      // 完整把草稿載入 MIE composition 受 WASM API 限制,留待後續整合。
+      this._recovery = null;
+      return;
+    }
   }
 
   handleKeyDown({ key }) {
@@ -339,4 +444,9 @@ export class ChatScreen extends BaseScreen {
   _fakeBattery(now) {
     return 72 + Math.sin(now / 60000) * 5 | 0;
   }
+}
+
+function truncatePreview(s, maxChars) {
+  if (!s) return '';
+  return s.length > maxChars ? s.slice(0, maxChars - 1) + '…' : s;
 }

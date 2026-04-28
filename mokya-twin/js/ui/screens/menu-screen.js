@@ -1,28 +1,34 @@
 /**
- * MenuScreen — 3×2 icon grid, DPAD-driven, opened from HomeScreen.
+ * MenuScreen — L-1 九宮格功能表(對齊 doc/ui/01-page-architecture.md)
  *
- * Layout (320×240 landscape):
- *   y=0..17    Status bar
- *   y=22..38   Title "選單"
- *   y=42..226  3×2 grid (cells ≈ 100×95)
- *   y=230..238 Footer hint "OK 進入 · BACK 返回"
+ * 由 L-0 桌面 FUNC 鍵呼出。9 個 App 入口分三列三欄:
+ *
+ *   訊息(A)  頻道(B)  節點(C)
+ *   地圖(D)  遙測(F)  工具(T)
+ *   設定(S)  SOS(Z)   系統儀表(EMU)
+ *
+ * 第三列右下保留為 EMU 系統儀表入口(原本的 Mesh/感測器/電池/GNSS 等
+ * 開發用功能集合到工具或設定底下;L-1 規格九宮格嚴格 9 格)。
  *
  * Keys:
- *   LEFT/RIGHT — ±1 with wrap
- *   UP/DOWN    — ±3 (row jump) with wrap
- *   OK         — goto MENU_ITEMS[sel].target
- *   BACK       — goto home
+ *   ▲▼◀▶  焦點移動
+ *   OK     goto MENU_ITEMS[sel].target
+ *   BACK   回 L-0 桌面
+ *   FUNC   回 L-0 桌面(規格:L-1 內按 FUNC 關閉九宮格)
  */
 
 import { BaseScreen } from '../screen-manager.js';
 
 export const MENU_ITEMS = [
-  { icon: 'chat',     label: 'MESHTASTIC', target: 'meshtastic'  },
-  { icon: 'mesh-cfg', label: 'MESH 設定',  target: 'mesh-config' },
-  { icon: 'sensors',  label: '感測器',     target: 'sensors'     },
-  { icon: 'gnss',     label: 'GNSS',       target: 'gnss'        },
-  { icon: 'battery',  label: '電池',       target: 'battery'     },
-  { icon: 'settings', label: '系統設定',   target: 'settings'    },
+  { icon: 'chat',     label: '訊息',   target: 'messages'    },
+  { icon: 'mesh-cfg', label: '頻道',   target: 'mesh-channels' },
+  { icon: 'sensors',  label: '節點',   target: 'nodes'       },
+  { icon: 'gnss',     label: '地圖',   target: 'gnss'        },
+  { icon: 'battery',  label: '遙測',   target: 'battery'     },
+  { icon: 'settings', label: '工具',   target: 'tools'       },
+  { icon: 'mesh-cfg', label: '設定',   target: 'settings'    },
+  { icon: 'battery',  label: 'SOS',    target: 'sos'         },
+  { icon: 'sensors',  label: 'EMU',    target: 'meshtastic'  },
 ];
 
 const COLS = 3;
@@ -84,5 +90,6 @@ export class MenuScreen extends BaseScreen {
     }
     if (fn === 'OK')   { this.goto(MENU_ITEMS[this._sel].target, 'slide_l'); return; }
     if (fn === 'BACK') { this.goBack('fade'); return; }
+    if (fn === 'FUNC') { this.goBack('fade'); return; }
   }
 }
