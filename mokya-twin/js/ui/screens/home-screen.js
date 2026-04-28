@@ -32,7 +32,6 @@ export class HomeScreen extends BaseScreen {
       time:    timeStr(),
       battery: bat,
       rssi:    -82,
-      mode:    'LoRa',
     });
 
     // ── Big clock (Unifont 16px upscaled 2×) ──────────────────────

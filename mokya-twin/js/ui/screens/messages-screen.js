@@ -44,7 +44,6 @@ export class MessagesScreen extends BaseScreen {
       time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
       battery: 75,
       rssi:    -82,
-      mode:    'LoRa',
     });
 
     // ── Tab strip (頻道 / 私訊) ───────────────────────────────────

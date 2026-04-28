@@ -158,7 +158,6 @@ export class SettingsScreen extends BaseScreen {
       time:    new Date().toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' }),
       battery: 72,
       rssi:    -85,
-      mode:    'SYS',
     });
 
   }

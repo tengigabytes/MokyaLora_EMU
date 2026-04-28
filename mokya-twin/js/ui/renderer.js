@@ -1,4 +1,6 @@
 import { ICONS } from './icons.js';
+import { C as TOKENS } from './colors.js';
+import { drawHintBar } from './components/hint-bar.js';
 
 /**
  * MokyaRenderer — LVGL-compatible Canvas Renderer
@@ -29,30 +31,47 @@ export class MokyaRenderer {
     this.W   = display.WIDTH;   // 240
     this.H   = display.HEIGHT;  // 320
 
-    // ── Color palette (Meshtastic green-tech) ────────────────────
-    // Maps to lv_palette / lv_color_hex() in LVGL
+    // ── Color palette ───────────────────────────────────────────
+    // 對齊 doc/ui/00-design-charter.md 全域配色 token。舊 key 名稱
+    // (BG/SURFACE/GREEN…)保留以免大量 screen 改動,但 hex 值已換為
+    // 規格 token。新焦點/IME 用色請走 FOCUS / FOCUS_BG。
     this.C = {
-      BG:          '#0A0A0A',
-      SURFACE:     '#1C1C1E',
-      SURFACE2:    '#2C2C2E',
-      SURFACE3:    '#3A3A3C',
-      BORDER:      '#38383A',
-      GREEN:       '#30D158',
-      GREEN_DIM:   '#1A7A36',
-      GREEN_MUTED: '#0D3A1C',
-      GREEN_GLOW:  'rgba(48,209,88,0.12)',
-      ACCENT:      '#00FF88',
-      TEXT:        '#EBEBF5',
-      TEXT_DIM:    '#8E8E93',
-      TEXT_MUTED:  '#3A3A3C',
-      DANGER:      '#FF453A',
-      WARNING:     '#FFD60A',
-      INFO:        '#64D2FF',
-      LORA:        '#BF5AF2',
-      BLUE:        '#0A84FF',
+      // 基底
+      BG:          TOKENS.bg_primary,         // #0B0F14
+      SURFACE:     TOKENS.bg_secondary,       // #161C24
+      SURFACE2:    TOKENS.bg_secondary2,      // #1F2731
+      SURFACE3:    TOKENS.border_normal,      // #30363D
+      BORDER:      TOKENS.border_normal,      // #30363D
+
+      // 文字
+      TEXT:        TOKENS.text_primary,       // #E6EDF3
+      TEXT_DIM:    TOKENS.text_secondary,     // #7D8590
+      TEXT_MUTED:  TOKENS.text_muted,         // #30363D
+
+      // 狀態色
+      GREEN:       TOKENS.accent_success,     // #39D353 (success / 未讀 / 3D Fix)
+      GREEN_DIM:   TOKENS.accent_success_dim, // #1A7A36
+      GREEN_MUTED: '#0D3A1C',                 // 暗綠底(成功項背景)
+      GREEN_GLOW:  'rgba(57,211,83,0.12)',
+      DANGER:      TOKENS.warn_red,           // #F85149
+      WARNING:     TOKENS.warn_yellow,        // #F1E05A
+      INFO:        TOKENS.info_blue,          // #64D2FF
+      LORA:        TOKENS.lora_purple,        // #BF5AF2
+      BLUE:        TOKENS.info_blue,
+      ACCENT:      TOKENS.accent_focus,       // 通用強調 → 統一橙
+
+      // 焦點 / IME(全新)
+      FOCUS:       TOKENS.accent_focus,       // #FFA657
+      FOCUS_BG:    TOKENS.bg_preedit,         // #2A2018(深橙底)
+      FOCUS_DIM:   TOKENS.accent_focus_dim,   // #8B5A2B
+
+      // 警告整條覆蓋
+      ALERT_BG_CRIT: TOKENS.alert_bg_critical, // #8B1A1A
+      ALERT_BG_WARN: TOKENS.alert_bg_warning,  // #6E1A1A
+
       // Chat bubbles
-      BUBBLE_OUT:  '#1C3A24',
-      BUBBLE_IN:   '#2C2C2E',
+      BUBBLE_OUT:  TOKENS.bubble_out,         // #1C3A24
+      BUBBLE_IN:   TOKENS.bubble_in,          // #161C24
     };
 
     // ── Font stack (mirrors LV_FONT_MONTSERRAT sizes) ────────────
@@ -109,76 +128,146 @@ export class MokyaRenderer {
     this.ctx.fillRect(0, 0, this.W, this.H);
   }
 
-  // ── Status Bar (y: 0–17, h: 18) ─────────────────────────────
+  // ── Status Bar (y: 0–15, h: 16) ─────────────────────────────
   /**
-   * @param {{ time: string, battery: number, rssi: number, mode: string }} opts
+   * 9 元素全域常駐 Status Bar(對齊 doc/ui/10-status-bar.md v2.0)。
+   *
+   * 字位佈局(8px 半形 Unifont):
+   *   時間 0–40, TX/RX 48–64, ⚠ 64–72, ●Mesh 80–136,
+   *   GPS 144–176, ✉ 184–208, 電量 216–256, 模式 288–304
+   *
+   * @param {object} opts
+   * @param {string} opts.time         "HH:MM"(已格式化)
+   * @param {number} opts.battery      0–100
+   * @param {boolean} opts.charging    true → 充電中
+   * @param {string}  [opts.mode='Op'] Op | 注 | EN | Ab | Num
+   * @param {number}  [opts.mesh=0]    鄰居節點數
+   * @param {string}  [opts.gps='off'] '3d'|'2d'|'searching'|'lost'|'off'
+   * @param {number}  [opts.unread=0]  未讀訊息總數
+   * @param {boolean} [opts.warn=false] 系統警告燈
+   * @param {boolean} [opts.tx=false]  TX 動作中(100ms 脈衝)
+   * @param {boolean} [opts.rx=false]  RX 動作中(100ms 脈衝)
+   * @param {string}  [opts.alert]     'sos' | 'sosRecv' | 'lowBatt' | undefined
+   * @param {string}  [opts.alertText] 整條覆蓋文字(配合 alert)
    */
-  drawStatusBar({ time, battery, rssi, mode = 'LoRa', charging = false }) {
-    const y = 0, h = 18;
-    // Background
-    this.ctx.fillStyle = '#111113';
+  drawStatusBar(opts = {}) {
+    const {
+      time = '--:--', battery = 0, charging = false, mode = 'Op',
+      mesh = 0, gps = 'off', unread = 0, warn = false,
+      tx = false, rx = false, alert, alertText,
+    } = opts;
+    const y = 0, h = 16;
+    const C = this.C;
+
+    // ── 警告態整條覆蓋(優先序:sos > sosRecv > lowBatt > 正常) ──
+    if (alert === 'sos' || alert === 'sosRecv' || alert === 'lowBatt') {
+      const bg = alert === 'lowBatt' ? C.ALERT_BG_WARN : C.ALERT_BG_CRIT;
+      this.ctx.fillStyle = bg;
+      this.ctx.fillRect(0, y, this.W, h);
+      this.ctx.fillStyle = C.TEXT;
+      this.ctx.textBaseline = 'top';
+      this.ctx.textAlign = 'left';
+      this.ctx.fillText(alertText || (alert === 'sos' ? '🚨 SOS 廣播中' : '⚠ 警告'), 4, y);
+      this.ctx.textBaseline = 'alphabetic';
+      return;
+    }
+
+    // 一般態
+    this.ctx.fillStyle = C.BG;
     this.ctx.fillRect(0, y, this.W, h);
-    // Bottom border
-    this.ctx.fillStyle = this.C.BORDER;
-    this.ctx.fillRect(0, h - 1, this.W, 1);
+    this.ctx.fillStyle = C.BORDER;
+    this.ctx.fillRect(0, h, this.W, 1);
 
-    // ── Left: mode badge ────────────────────────────────────────
-    this.ctx.font = this.F.XS;
-    this.ctx.fillStyle = this.C.GREEN;
-    this.ctx.textBaseline = 'middle';
-    this.ctx.fillText(mode, 4, y + h / 2);
+    this.ctx.textBaseline = 'top';
+    this.ctx.textAlign    = 'left';
 
-    // ── Center: time ────────────────────────────────────────────
-    this.ctx.font = '10px system-ui,sans-serif';
-    this.ctx.fillStyle = this.C.TEXT;
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText(time, this.W / 2, y + h / 2);
+    // 1. 時間 x=0..40
+    this.ctx.fillStyle = C.TEXT;
+    this.ctx.fillText(time, 0, y);
 
-    // ── Right: RSSI + battery ────────────────────────────────────
-    this._drawSignalBars(this.W - 38, y + 4, rssi);
-    this._drawBatteryIcon(this.W - 18, y + 4, battery, charging);
+    // 2. TX/RX 動作燈 x=48..64
+    this.ctx.fillStyle = tx ? C.FOCUS : C.SURFACE3;
+    this.ctx.fillText('▲', 48, y);
+    this.ctx.fillStyle = rx ? C.GREEN : C.SURFACE3;
+    this.ctx.fillText('▼', 56, y);
 
-    this.ctx.textAlign = 'left';
+    // 3. 警告燈 x=64..72(條件,位置永遠保留)
+    if (warn) {
+      this.ctx.fillStyle = C.WARNING;
+      this.ctx.fillText('⚠', 64, y);
+    }
+
+    // 4. 鄰居節點 x=80..136
+    {
+      const meshAge = (typeof mesh === 'object') ? mesh.lastHeardSec : null;
+      const meshN   = (typeof mesh === 'object') ? (mesh.count | 0)  : (mesh | 0);
+      let dotColor = C.TEXT_MUTED;
+      if (meshN >= 1) {
+        if (meshAge === null || meshAge < 300)        dotColor = C.GREEN;
+        else if (meshAge < 900)                       dotColor = C.WARNING;
+        else                                          dotColor = C.DANGER;
+      }
+      this.ctx.fillStyle = dotColor;
+      this.ctx.fillText('●', 80, y);
+      this.ctx.fillStyle = C.TEXT;
+      const meshStr = meshN > 99 ? '99+' : String(meshN);
+      this.ctx.fillText('Mesh:' + meshStr, 88, y);
+    }
+
+    // 5. GPS x=144..176
+    {
+      const map = {
+        '3d':        { glyph: '●', color: C.GREEN     },
+        '2d':        { glyph: '●', color: C.WARNING   },
+        'searching': { glyph: '◌', color: C.TEXT_DIM  },
+        'lost':      { glyph: '✕', color: C.DANGER    },
+        'off':       { glyph: '○', color: C.TEXT_MUTED },
+      };
+      const g = map[gps] || map.off;
+      this.ctx.fillStyle = g.color;
+      this.ctx.fillText(g.glyph, 144, y);
+      this.ctx.fillStyle = (gps === '3d' || gps === '2d') ? C.TEXT : C.TEXT_DIM;
+      this.ctx.fillText('GPS', 152, y);
+    }
+
+    // 6. 未讀訊息 x=184..208(條件)
+    if (unread > 0) {
+      this.ctx.fillStyle = C.GREEN;
+      this.ctx.fillText('✉', 184, y);
+      this.ctx.fillStyle = C.GREEN;
+      this.ctx.fillText(unread > 9 ? '9+' : String(unread), 192, y);
+    }
+
+    // 7. 電量 x=216..256
+    {
+      let batColor = C.TEXT;
+      if (battery <= 5)        batColor = C.DANGER;
+      else if (battery <= 15)  batColor = C.DANGER;
+      else if (battery <= 30)  batColor = C.WARNING;
+      const glyph = charging ? '⚡' : (battery >= 99 ? '▪' : '▣');
+      this.ctx.fillStyle = batColor;
+      this.ctx.fillText(glyph, 216, y);
+      const pctStr = Math.max(0, Math.min(100, battery | 0)) + '%';
+      this.ctx.fillText(pctStr, 224, y);
+    }
+
+    // 8. 模式 x=288..304
+    {
+      const isIme = (mode !== 'Op');
+      this.ctx.fillStyle = isIme ? C.FOCUS : C.TEXT;
+      this.ctx.fillText(mode, 288, y);
+    }
+
     this.ctx.textBaseline = 'alphabetic';
   }
 
-  _drawSignalBars(x, y, rssi) {
-    // RSSI: > -70 = 4 bars, > -85 = 3, > -100 = 2, > -115 = 1, else 0
-    const bars = rssi > -70 ? 4 : rssi > -85 ? 3 : rssi > -100 ? 2 : rssi > -115 ? 1 : 0;
-    const heights = [3, 5, 7, 9];
-    for (let i = 0; i < 4; i++) {
-      const bh = heights[i];
-      const bx = x + i * 4;
-      const by = y + (9 - bh);
-      this.ctx.fillStyle = i < bars ? this.C.GREEN : this.C.SURFACE3;
-      this.ctx.fillRect(bx, by, 3, bh);
-    }
-  }
-
-  _drawBatteryIcon(x, y, pct, charging) {
-    const w = 14, h = 8;
-    // Outer rect
-    this.ctx.strokeStyle = this.C.TEXT_DIM;
-    this.ctx.lineWidth = 1;
-    this.ctx.strokeRect(x + 0.5, y + 0.5, w, h);
-    // Terminal nub
-    this.ctx.fillStyle = this.C.TEXT_DIM;
-    this.ctx.fillRect(x + w + 1, y + 2, 2, 4);
-    // Fill
-    const fillW = Math.max(1, Math.floor((w - 2) * pct / 100));
-    const color = pct > 40 ? this.C.GREEN : pct > 15 ? this.C.WARNING : this.C.DANGER;
-    this.ctx.fillStyle = color;
-    this.ctx.fillRect(x + 1, y + 1, fillW, h - 2);
-    // Charging bolt
-    if (charging) {
-      this.ctx.fillStyle = '#FFD60A';
-      this.ctx.font = '8px system-ui';
-      this.ctx.textAlign = 'center';
-      this.ctx.textBaseline = 'middle';
-      this.ctx.fillText('⚡', x + w / 2, y + h / 2);
-    }
-    this.ctx.textAlign = 'left';
-    this.ctx.textBaseline = 'alphabetic';
+  // ── Hint Bar (y: H-16, h: 16) — G-2 動態鍵位提示 ────────────
+  /**
+   * @param {{key:string,label:string}[]} hints
+   * @param {{y?:number}} [opts]
+   */
+  drawHintBar(hints, opts) {
+    drawHintBar(this, hints, opts);
   }
 
   // ── Tab Bar (y: H-20, h: 20) ─────────────────────────────────
@@ -201,12 +290,12 @@ export class MokyaRenderer {
       const isActive = i === activeIdx;
       // Active indicator line
       if (isActive) {
-        this.ctx.fillStyle = this.C.GREEN;
+        this.ctx.fillStyle = this.C.FOCUS;
         this.ctx.fillRect(tx + 4, ty, tabW - 8, 2);
       }
       // Label
       this.ctx.font = this.F.SM;
-      this.ctx.fillStyle = isActive ? this.C.GREEN : this.C.TEXT_DIM;
+      this.ctx.fillStyle = isActive ? this.C.FOCUS : this.C.TEXT_DIM;
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
       this.ctx.fillText(label, tx + tabW / 2, ty + th / 2 + 1);
@@ -300,10 +389,10 @@ export class MokyaRenderer {
     if (pendingStr.length > 0) {
       const w = this.ctx.measureText(pendingStr).width;
       if (pv.style === 2 /* Inverted */) {
-        // Reverse-video: green fill, background-color text
-        this.ctx.fillStyle = this.C.GREEN;
+        // Reverse-video: focus-orange fill, bg-color text
+        this.ctx.fillStyle = this.C.FOCUS;
         this.ctx.fillRect(x - 1, y + 3, w + 2, h - 6);
-        this.ctx.fillStyle = '#0A0A0A';
+        this.ctx.fillStyle = this.C.BG;
         this.ctx.fillText(pendingStr, x, midY);
       } else if (pv.style === 1 /* PrefixBold */) {
         // Underline the whole pending; bold the matched prefix.
@@ -311,27 +400,27 @@ export class MokyaRenderer {
         const prefixStr = mp > 0 ? this._utf8Slice(pendingStr, 0, mp) : '';
         const restStr   = mp > 0 ? this._utf8Slice(pendingStr, mp)    : pendingStr;
 
-        // Prefix: bold green
+        // Prefix: bold focus-orange
         if (prefixStr) {
           this.ctx.font = 'bold ' + this.F.ZH_MD;
-          this.ctx.fillStyle = this.C.GREEN;
+          this.ctx.fillStyle = this.C.FOCUS;
           this.ctx.fillText(prefixStr, x, midY);
           const pw = this.ctx.measureText(prefixStr).width;
           this._underline(x, y + h - 4, pw);
           x += pw;
           this.ctx.font = this.F.ZH_MD;
         }
-        // Rest: normal green
+        // Rest: dim focus-orange
         if (restStr) {
-          this.ctx.fillStyle = this.C.GREEN_DIM;
+          this.ctx.fillStyle = this.C.FOCUS_DIM;
           this.ctx.fillText(restStr, x, midY);
           const rw = this.ctx.measureText(restStr).width;
           this._underline(x, y + h - 4, rw);
           x += rw;
         }
       } else {
-        // None
-        this.ctx.fillStyle = this.C.GREEN;
+        // None — preedit text 橙
+        this.ctx.fillStyle = this.C.FOCUS;
         this.ctx.fillText(pendingStr, x, midY);
         x += w;
       }
@@ -340,7 +429,7 @@ export class MokyaRenderer {
     // ── cursor block (reverse-video) ──
     const curW = 2;
     if (cursorBlink !== false) {
-      this.ctx.fillStyle = this.C.GREEN;
+      this.ctx.fillStyle = this.C.FOCUS;
       this.ctx.fillRect(x, y + 4, curW, h - 8);
     }
     x += curW + 1;
@@ -365,9 +454,9 @@ export class MokyaRenderer {
     if (modeStr) {
       const w = this.ctx.measureText(modeStr).width + 8;
       const cx = 2, cy = y + 3;
-      this.ctx.fillStyle = this.C.GREEN;
+      this.ctx.fillStyle = this.C.FOCUS;
       this.ctx.fillRect(cx, cy, w, h - 6);
-      this.ctx.fillStyle = '#0A0A0A';
+      this.ctx.fillStyle = this.C.BG;
       this.ctx.textAlign = 'center';
       this.ctx.fillText(modeStr, cx + w / 2, midY);
       this.ctx.textAlign = 'left';
@@ -455,10 +544,10 @@ export class MokyaRenderer {
       const slotW = widths[i];
       const isSel = (i === sel);
       if (isSel) {
-        this.ctx.fillStyle = this.C.GREEN_MUTED;
+        this.ctx.fillStyle = this.C.FOCUS_BG;
         this.ctx.fillRect(slotX - 1, y + 3, slotW + 1, h - 6);
       }
-      this.ctx.fillStyle = isSel ? this.C.GREEN : this.C.TEXT;
+      this.ctx.fillStyle = isSel ? this.C.FOCUS : this.C.TEXT;
       this.ctx.fillText(all[i], slotX + SLOT_X_PAD / 2, midY);
       x += w;
     }
@@ -500,9 +589,9 @@ export class MokyaRenderer {
       const cx = startX + c * (slotW + 2);
       const isSel = (idx === sel);
       if (isSel) {
-        this.ctx.fillStyle = this.C.GREEN;
+        this.ctx.fillStyle = this.C.FOCUS;
         this.ctx.fillRect(cx, y + 3, slotW, slotH);
-        this.ctx.fillStyle = '#0A0A0A';
+        this.ctx.fillStyle = this.C.BG;
       } else {
         this.ctx.fillStyle = this.C.SURFACE3 ?? '#2A2A2E';
         this.ctx.fillRect(cx, y + 3, slotW, slotH);
@@ -515,7 +604,7 @@ export class MokyaRenderer {
   }
 
   _underline(x, y, w) {
-    this.ctx.fillStyle = this.C.GREEN_DIM;
+    this.ctx.fillStyle = this.C.FOCUS_DIM;
     this.ctx.fillRect(x, y, w, 1);
   }
 
@@ -726,20 +815,20 @@ export class MokyaRenderer {
   // ── List item ────────────────────────────────────────────────
   drawListItem(x, y, w, h, { title, subtitle, time, badge, active = false } = {}) {
     if (active) {
-      this.ctx.fillStyle = this.C.GREEN_MUTED;
+      this.ctx.fillStyle = this.C.FOCUS;
       this.ctx.fillRect(x, y, 2, h);
     }
-    this.ctx.fillStyle = active ? this.C.SURFACE2 : 'transparent';
+    this.ctx.fillStyle = active ? this.C.FOCUS_BG : 'transparent';
     this.ctx.fillRect(x, y, w, h);
 
     // Avatar circle
     this.ctx.beginPath();
     this.ctx.arc(x + 16, y + h / 2, 10, 0, Math.PI * 2);
-    this.ctx.fillStyle = active ? this.C.GREEN_DIM : this.C.SURFACE2;
+    this.ctx.fillStyle = active ? this.C.FOCUS_DIM : this.C.SURFACE2;
     this.ctx.fill();
-    if (active) { this.ctx.strokeStyle = this.C.GREEN; this.ctx.lineWidth = 1; this.ctx.stroke(); }
+    if (active) { this.ctx.strokeStyle = this.C.FOCUS; this.ctx.lineWidth = 1; this.ctx.stroke(); }
     this.drawLabel(x + 16, y + h / 2, (title ?? '?')[0], {
-      font: '11px system-ui', color: active ? this.C.GREEN : this.C.TEXT_DIM,
+      font: '11px system-ui', color: active ? this.C.FOCUS : this.C.TEXT_DIM,
       align: 'center', baseline: 'middle',
     });
 
@@ -904,8 +993,8 @@ export class MokyaRenderer {
       const isSel = (i === selectedIdx);
       this.drawCard(x, y, cellW, cellH, {
         radius: 6,
-        bg:     isSel ? this.C.GREEN_MUTED : this.C.SURFACE,
-        border: isSel ? this.C.GREEN       : this.C.BORDER,
+        bg:     isSel ? this.C.FOCUS_BG : this.C.SURFACE,
+        border: isSel ? this.C.FOCUS    : this.C.BORDER,
       });
 
       const item = items[i];
@@ -913,12 +1002,12 @@ export class MokyaRenderer {
       if (ic) {
         const ix = x + ((cellW - ic.w) >> 1);
         const iy = y + 8;
-        this.drawIcon(item.icon, ix, iy, isSel ? this.C.GREEN : this.C.TEXT);
+        this.drawIcon(item.icon, ix, iy, isSel ? this.C.FOCUS : this.C.TEXT);
       }
       if (item.label) {
         this.drawLabel(x + cellW / 2, y + cellH - 8, item.label, {
           font:     this.F.ZH_MD,
-          color:    isSel ? this.C.GREEN : this.C.TEXT,
+          color:    isSel ? this.C.FOCUS : this.C.TEXT,
           align:    'center',
           baseline: 'alphabetic',
         });

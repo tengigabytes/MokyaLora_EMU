@@ -236,7 +236,6 @@ export class ChatScreen extends BaseScreen {
       time:    new Date().toLocaleTimeString('zh-TW', { hour:'2-digit', minute:'2-digit' }),
       battery: this._fakeBattery(now),
       rssi:    this._rssiHistory[this._rssiHistory.length - 1] ?? -90,
-      mode:    'LoRa',
     });
 
   }

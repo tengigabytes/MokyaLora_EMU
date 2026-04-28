@@ -79,7 +79,7 @@ export class FieldEditScreen extends BaseScreen {
       time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
       battery: 75,
       rssi:    -82,
-      mode:    this._field?.type === 'string' ? this.mie.currentMode || '中' : 'LoRa',
+      mode:    this._field?.type === 'string' ? (this.mie.currentMode || '注') : 'Op',
     });
 
     const fld = this._field;

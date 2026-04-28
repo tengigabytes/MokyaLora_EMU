@@ -48,7 +48,6 @@ export class MenuScreen extends BaseScreen {
       time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
       battery: 75,
       rssi:    -82,
-      mode:    'LoRa',
     });
 
     r.drawLabel(r.W / 2, 32, '選單', {
