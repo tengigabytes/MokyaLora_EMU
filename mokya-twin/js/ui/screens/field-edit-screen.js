@@ -58,6 +58,9 @@ export class FieldEditScreen extends BaseScreen {
     this._draft       = field.value;
     this._saveFn      = saveFn;
     this._parentTitle = parentTitle || '';
+    // 危險項二次確認(對齊 50-settings-leaf-templates.md §危險項二次確認)
+    // confirmFocus: null=尚未進入確認 / 0=取消 / 1=確認變更
+    this._confirmFocus = null;
     if (field.type === 'enum') {
       const idx = field.options.indexOf(field.value);
       this._enumIdx = idx >= 0 ? idx : 0;
@@ -114,6 +117,45 @@ export class FieldEditScreen extends BaseScreen {
     }
 
     this._drawDescription(r, fld);
+
+    // 危險項二次確認下方按鈕區
+    if (this._confirmFocus !== null) {
+      this._drawConfirmRow(r, fld);
+    }
+  }
+
+  /** 危險項確認列 — 規格 50-settings-leaf-templates.md §危險項二次確認。 */
+  _drawConfirmRow(r, fld) {
+    const C = r.C;
+    const ctx = r.ctx;
+    const y = r.H - 30;
+    // 警告訊息
+    const warnMsg = fld.dangerWarning || '⚠ 變更此項可能影響本機運作';
+    r.drawLabel(r.W / 2, y - 6, warnMsg, {
+      font: r.F.ZH_SM, color: C.WARNING, align: 'center',
+    });
+    // 按鈕
+    const btnY = y, btnH = 26, btnW = 100, gap = 12;
+    const totalW = btnW * 2 + gap;
+    const x0 = (r.W - totalW) / 2;
+    const items = [
+      { label: '取消',     x: x0 },
+      { label: '確認變更', x: x0 + btnW + gap },
+    ];
+    items.forEach((it, i) => {
+      const isSel = (this._confirmFocus === i);
+      r.drawCard(it.x, btnY, btnW, btnH, {
+        radius: 4,
+        bg:     isSel ? (i === 1 ? C.DANGER : C.FOCUS_BG) : C.SURFACE,
+        border: isSel ? (i === 1 ? C.DANGER : C.FOCUS)    : C.BORDER,
+      });
+      const label = isSel ? `▶${it.label}` : it.label;
+      r.drawLabel(it.x + btnW / 2, btnY + btnH / 2 + 5, label, {
+        font: r.F.ZH_MD,
+        color: isSel ? (i === 1 ? C.TEXT : C.FOCUS) : C.TEXT,
+        align: 'center',
+      });
+    });
   }
 
   // ── 共通骨架 ──────────────────────────────────────────────────
@@ -428,6 +470,21 @@ export class FieldEditScreen extends BaseScreen {
     if (!this._field) { if (fn === 'BACK') this.goBack(); return; }
     const t = this._field.type;
 
+    // 危險項二次確認攔截(規格 §危險項二次確認)
+    if (this._confirmFocus !== null) {
+      if (fn === 'LEFT')  { this._confirmFocus = 0; return; }
+      if (fn === 'RIGHT') { this._confirmFocus = 1; return; }
+      if (fn === 'BACK')  { this.goBack(); return; }   // 不套用
+      if (fn === 'OK') {
+        if (this._confirmFocus === 1) {
+          this._commit();                               // 確認變更
+        } else {
+          this._confirmFocus = null;                    // 取消 → 回編輯
+        }
+      }
+      return;
+    }
+
     // BACK 永遠取消 + goBack
     if (fn === 'BACK') {
       this.goBack();
@@ -499,10 +556,15 @@ export class FieldEditScreen extends BaseScreen {
   }
 
   _commit() {
-    if (this._field) {
-      this._field.value = this._draft;
-      if (typeof this._saveFn === 'function') this._saveFn();
+    if (!this._field) { this.goBack(); return; }
+    // 危險項:OK 不直接套用,改顯示 [取消][確認變更] 按鈕區
+    // (規格 50-templates §危險項二次確認:預設焦點在「確認變更」)
+    if (this._field.isDangerous && this._confirmFocus === null) {
+      this._confirmFocus = 1;
+      return;
     }
+    this._field.value = this._draft;
+    if (typeof this._saveFn === 'function') this._saveFn();
     this.goBack();
   }
 }

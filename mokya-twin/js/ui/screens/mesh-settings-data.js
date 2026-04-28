@@ -27,7 +27,10 @@ export const CONFIG_GROUPS = {
     cli:   'device',
     fields: [
       f('device.role',                       '角色',                  'enum', 'CLIENT', {
-        options: ['CLIENT','CLIENT_MUTE','ROUTER','ROUTER_CLIENT','REPEATER','TRACKER','SENSOR','TAK','CLIENT_HIDDEN','LOST_AND_FOUND','TAK_TRACKER'] }),
+        options: ['CLIENT','CLIENT_MUTE','ROUTER','ROUTER_CLIENT','REPEATER','TRACKER','SENSOR','TAK','CLIENT_HIDDEN','LOST_AND_FOUND','TAK_TRACKER'],
+        isDangerous: true,
+        dangerWarning: '⚠ 變更角色將觸發本機重啟',
+      }),
       f('device.serial_enabled',             'Serial 啟用',           'bool', true),
       f('device.debug_log_enabled',          'Debug log',             'bool', false),
       f('device.button_gpio',                'Button GPIO',           'int',  0),
@@ -48,10 +51,16 @@ export const CONFIG_GROUPS = {
     cli:   'lora',
     fields: [
       f('lora.region',                'Region',           'enum', 'TW', {
-        options: ['UNSET','US','EU_433','EU_868','CN','JP','ANZ','KR','TW','RU','IN','NZ_865','TH','LORA_24','UA_433','UA_868','MY_433','MY_919','SG_923','PH_433','PH_868','PH_915','ANZ_433'] }),
+        options: ['UNSET','US','EU_433','EU_868','CN','JP','ANZ','KR','TW','RU','IN','NZ_865','TH','LORA_24','UA_433','UA_868','MY_433','MY_919','SG_923','PH_433','PH_868','PH_915','ANZ_433'],
+        isDangerous: true,
+        dangerWarning: '⚠ 變更 Region 將與目前網路斷聯且觸發本機重啟',
+      }),
       f('lora.use_preset',            '使用預設',         'bool', true),
       f('lora.modem_preset',          'Modem Preset',     'enum', 'LONG_FAST', {
-        options: ['LONG_FAST','LONG_SLOW','VERY_LONG_SLOW','MEDIUM_SLOW','MEDIUM_FAST','SHORT_SLOW','SHORT_FAST','LONG_MODERATE','SHORT_TURBO'] }),
+        options: ['LONG_FAST','LONG_SLOW','VERY_LONG_SLOW','MEDIUM_SLOW','MEDIUM_FAST','SHORT_SLOW','SHORT_FAST','LONG_MODERATE','SHORT_TURBO'],
+        isDangerous: true,
+        dangerWarning: '⚠ 變更 Preset 將與目前網路斷聯且觸發本機重啟',
+      }),
       f('lora.bandwidth',             'Bandwidth',        'int',   250,  { unit: 'kHz' }),
       f('lora.spread_factor',         'Spread Factor',    'int',   11),
       f('lora.coding_rate',           'Coding Rate',      'int',   5),
@@ -389,7 +398,8 @@ export const CHANNELS = Array.from({ length: 8 }, (_, i) => ({
       i === 0 ? 'PRIMARY' : 'DISABLED',
       { options: ['DISABLED','PRIMARY','SECONDARY'] }),
     f(`channels.${i}.settings.name`,             '名稱',         'string', i === 0 ? 'LongFast' : ''),
-    f(`channels.${i}.settings.psk`,              'PSK',          'string', i === 0 ? '(default)' : ''),
+    f(`channels.${i}.settings.psk`,              'PSK',          'string', i === 0 ? '(default)' : '',
+      i === 0 ? { isDangerous: true, dangerWarning: '⚠ 變更主頻道 PSK 將斷聯所有同網節點' } : {}),
     f(`channels.${i}.settings.id`,               'ID',           'int',    0),
     f(`channels.${i}.settings.uplink_enabled`,   'Uplink',       'bool',   false),
     f(`channels.${i}.settings.downlink_enabled`, 'Downlink',     'bool',   false),

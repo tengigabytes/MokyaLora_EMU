@@ -42,6 +42,7 @@ import { PlaceholderScreen }    from './ui/screens/placeholder-screen.js';
 import { StatusDetailScreen }   from './ui/screens/status-detail-screen.js';
 import { SOSScreen }            from './ui/screens/sos-screen.js';
 import { LockScreen }           from './ui/screens/lock-screen.js';
+import { SettingsHomeScreen }   from './ui/screens/settings-home-screen.js';
 import { cleanupOlderDays }     from './ui/screens/drafts-store.js';
 import { save as saveMeshConfig }   from './ui/screens/mesh-config-store.js';
 import { save as saveSystemConfig } from './ui/screens/system-settings-store.js';
@@ -159,7 +160,10 @@ async function boot() {
   const sysFieldEdit    = new FieldEditScreen(renderer, mie, serial);
   sysSettingsList.setEditScreen(sysFieldEdit, saveSystemConfig, 'system-field-edit');
   const sysDeps = { settingsList: sysSettingsList };
-  screens.register('settings',            new SystemConfigScreen(renderer, mie, serial, sysDeps));
+  // S-0 設定主頁(規格分組);舊的 SystemConfigScreen 移到 'system-config'
+  // 名稱供 EMU 開發儀表使用,L-1 九宮格「設定」入口走新的 S-0 主頁。
+  screens.register('settings',     new SettingsHomeScreen(renderer, mie, serial));
+  screens.register('system-config',new SystemConfigScreen(renderer, mie, serial, sysDeps));
   screens.register('system-settings-list', sysSettingsList);
   screens.register('system-field-edit',   sysFieldEdit);
 
