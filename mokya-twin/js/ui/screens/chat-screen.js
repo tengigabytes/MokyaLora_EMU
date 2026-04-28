@@ -13,6 +13,7 @@
 
 import { BaseScreen } from '../screen-manager.js';
 import { InputMode }  from '../../core/mie-processor.js';
+import { setDraft, getDraft, clearDraft, humanAge } from './drafts-store.js';
 
 // Pre-populated mock conversation
 const INITIAL_MESSAGES = [
@@ -58,6 +59,12 @@ export class ChatScreen extends BaseScreen {
     this._scrollY = 0;
   }
 
+  /** 對齊 doc/ui/12-ime.md 草稿系統:每個目的地一份 key。 */
+  _draftId() {
+    const c = this._conversation;
+    return `chat:${c.kind}:${c.id}`;
+  }
+
   onEnter(from) {
     super.onEnter(from);
     // Subscribe to MIE events
@@ -72,9 +79,23 @@ export class ChatScreen extends BaseScreen {
     if (simMsgs.length > INITIAL_MESSAGES.length) {
       this._messages = simMsgs.slice(-50);
     }
+    // 草稿恢復:若該對象有未送草稿,顯示提示列(完整恢復對話框留 PR6)。
+    const draft = getDraft(this._draftId());
+    this._draftBanner = draft
+      ? { text: draft.text, age: humanAge((Date.now() / 1000 | 0) - draft.savedAt) }
+      : null;
   }
 
   onLeave(toScreen) {
+    // 模式 B + 離開 + buffer 非空 → 存草稿(規格)
+    const pendingStr = (this._compState?.pending?.str ?? '');
+    const committed  = (this._compState?.committed ?? '');
+    const buffer = (committed + pendingStr).trim();
+    if (buffer) {
+      setDraft(this._draftId(), buffer);
+    }
+    this._draftBanner = null;
+
     this.mie.removeEventListener('composition:update',  this._onCompositionUpdate);
     this.mie.removeEventListener('composition:commit',  this._onCompositionCommit);
     this.mie.removeEventListener('action:enter',        this._onEnterAction);
@@ -123,6 +144,9 @@ export class ChatScreen extends BaseScreen {
     this._messages.push(msg);
     this._scrollY = 9999;
     this._compState.committed = '';
+    // 送出後清除該對象的草稿(規格 §草稿生命週期)
+    clearDraft(this._draftId());
+    this._draftBanner = null;
     // Route DMs to the recipient node, channel messages stay broadcast.
     const opts = this._conversation.kind === 'dm'
       ? { to: this._conversation.id, wantAck: true }

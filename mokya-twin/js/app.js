@@ -39,6 +39,10 @@ import { SensorsScreen }        from './ui/screens/sensors-screen.js';
 import { BatteryScreen }        from './ui/screens/battery-screen.js';
 import { SystemConfigScreen }   from './ui/screens/system-config-screen.js';
 import { PlaceholderScreen }    from './ui/screens/placeholder-screen.js';
+import { StatusDetailScreen }   from './ui/screens/status-detail-screen.js';
+import { SOSScreen }            from './ui/screens/sos-screen.js';
+import { LockScreen }           from './ui/screens/lock-screen.js';
+import { cleanupOlderDays }     from './ui/screens/drafts-store.js';
 import { save as saveMeshConfig }   from './ui/screens/mesh-config-store.js';
 import { save as saveSystemConfig } from './ui/screens/system-settings-store.js';
 import { NODES, pushSignalSample } from './ui/screens/nodes-data.js';
@@ -162,6 +166,13 @@ async function boot() {
   screens.register('sensors',     new SensorsScreen(renderer, mie, serial));
   screens.register('gnss',        new MapScreen(renderer, mie, serial, { nodeDetail }));
   screens.register('battery',     new BatteryScreen(renderer, mie, serial));
+  // 全域 Modal-style 螢幕(由全域長按事件觸發)
+  screens.register('status-detail', new StatusDetailScreen(renderer, mie, serial));
+  screens.register('sos',           new SOSScreen(renderer, mie, serial));
+  screens.register('lock',          new LockScreen(renderer, mie, serial));
+
+  // 啟動時清掉超過 30 天的草稿(規格 §草稿生命週期)
+  cleanupOlderDays(30);
 
   // ── Mirror real Meshtastic packets into the EMU registries ───────
   serial.addEventListener('serial:my_info', (e) => {
@@ -194,10 +205,37 @@ async function boot() {
   });
 
   // 長按事件(對齊 doc/ui/00-design-charter.md)。
-  // 各 handler 留 PR3+ 接線(SOS / 鎖屏 / Status Bar 詳情 / CapsLock / OK 模式 B)。
+  // 全域路由先吃 FUNC/BACK/POWER(Status Bar 詳情、鎖屏、SOS),
+  // 其餘(MODE / OK)轉給當前 screen 的 handleKeyHold。
   keyboard.addEventListener('key:hold', (e) => {
     const { key, heldMs } = e.detail;
     addDebugEntry('key', `⏱ ${key.fn} HOLD ${heldMs}ms`);
+
+    // 全域長按:不論在哪個 screen 都觸發
+    if (key.fn === 'FUNC') {
+      // 已在 status-detail / sos / lock 面板時不再疊加
+      const cur = screens._current?._name;
+      if (cur !== 'status-detail' && cur !== 'sos' && cur !== 'lock') {
+        screens.navigateTo('status-detail', 'fade');
+      }
+      return;
+    }
+    if (key.fn === 'BACK') {
+      const cur = screens._current?._name;
+      if (cur !== 'lock' && cur !== 'sos') {
+        screens.navigateTo('lock', 'fade');
+      }
+      return;
+    }
+    if (key.fn === 'POWER') {
+      const cur = screens._current?._name;
+      if (cur !== 'sos') {
+        screens.navigateTo('sos', 'fade');
+      }
+      return;
+    }
+
+    // 其餘交由 screen 處理
     if (typeof screens.handleKeyHold === 'function') {
       screens.handleKeyHold(e.detail);
     }
