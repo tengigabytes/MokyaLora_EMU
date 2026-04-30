@@ -44,6 +44,26 @@ import { SOSScreen }            from './ui/screens/sos-screen.js';
 import { LockScreen }           from './ui/screens/lock-screen.js';
 import { SettingsHomeScreen }   from './ui/screens/settings-home-screen.js';
 import { TelemetryHistScreen }  from './ui/screens/telemetry-hist-screen.js';
+import { TelemetryScreen }      from './ui/screens/telemetry-screen.js';
+import { ToolsScreen }          from './ui/screens/tools-screen.js';
+import { TracerouteScreen }     from './ui/screens/traceroute-screen.js';
+import { RangeTestScreen }      from './ui/screens/range-test-screen.js';
+import { SpectrumScreen }       from './ui/screens/spectrum-screen.js';
+import { SnifferScreen }        from './ui/screens/sniffer-screen.js';
+import { LoraTestScreen }       from './ui/screens/lora-test-screen.js';
+import { GnssSkyScreen }        from './ui/screens/gnss-sky-screen.js';
+import { PairingScreen }        from './ui/screens/pairing-screen.js';
+import { FirmwareInfoScreen }   from './ui/screens/firmware-info-screen.js';
+import { CannedScreen }         from './ui/screens/canned-screen.js';
+import { MsgDetailScreen }      from './ui/screens/msg-detail-screen.js';
+import { ChannelAddScreen }     from './ui/screens/channel-add-screen.js';
+import { ChannelShareScreen }   from './ui/screens/channel-share-screen.js';
+import { NodeOpsScreen }        from './ui/screens/node-ops-screen.js';
+import { RemoteAdminScreen }    from './ui/screens/remote-admin-screen.js';
+import { MyNodeScreen }         from './ui/screens/my-node-screen.js';
+import { MapNavScreen }         from './ui/screens/map-nav-screen.js';
+import { SosStandbyScreen }     from './ui/screens/sos-standby-screen.js';
+import { SosConfigScreen }      from './ui/screens/sos-config-screen.js';
 import { cleanupOlderDays }     from './ui/screens/drafts-store.js';
 import { save as saveMeshConfig }   from './ui/screens/mesh-config-store.js';
 import { save as saveSystemConfig } from './ui/screens/system-settings-store.js';
@@ -149,7 +169,9 @@ async function boot() {
   const meshSettingsList = new SettingsListScreen(renderer, mie, serial);
   const meshFieldEdit    = new FieldEditScreen(renderer, mie, serial);
   meshSettingsList.setEditScreen(meshFieldEdit, saveMeshConfig, 'mesh-field-edit');
-  const meshDeps = { settingsList: meshSettingsList };
+  const channelAdd   = new ChannelAddScreen(renderer, mie, serial);
+  const channelShare = new ChannelShareScreen(renderer, mie, serial);
+  const meshDeps = { settingsList: meshSettingsList, channelAdd, channelShare };
   screens.register('mesh-config',         new MeshConfigScreen(renderer, mie, serial, meshDeps));
   screens.register('mesh-modules',        new MeshModulesScreen(renderer, mie, serial, meshDeps));
   screens.register('mesh-channels',       new MeshChannelsScreen(renderer, mie, serial, meshDeps));
@@ -169,51 +191,70 @@ async function boot() {
   screens.register('system-field-edit',   sysFieldEdit);
 
   screens.register('sensors',     new SensorsScreen(renderer, mie, serial));
-  screens.register('gnss',        new MapScreen(renderer, mie, serial, { nodeDetail }));
+  // mapScreen 在 mapNav 還沒建立前先 stub,實際 dep 在 D 群初始化後再灌進去。
+  const mapScreen = new MapScreen(renderer, mie, serial, { nodeDetail });
+  screens.register('gnss',        mapScreen);
   screens.register('battery',     new BatteryScreen(renderer, mie, serial));
   // 全域 Modal-style 螢幕(由全域長按事件觸發)
   screens.register('status-detail', new StatusDetailScreen(renderer, mie, serial));
   screens.register('sos',           new SOSScreen(renderer, mie, serial));
   screens.register('lock',          new LockScreen(renderer, mie, serial));
 
-  // L-1 九宮格直接 navigate 的入口 + 67 頁中尚未細部規劃的 App,以
-  // placeholder 接住,避免按下九宮格無反應(對齊 doc/ui/01-page-architecture.md)。
-  // 後續 PR 會逐個替換成具體 screen。
+  // L-1 九宮格 + 子頁,對齊 dev-Sblzm 2bca5e0。仍未實作的 App 用 placeholder。
   const ph = (label) => new PlaceholderScreen(renderer, mie, serial, label);
-  // 工具 T 群
-  screens.register('tools',         ph('工具 (T-0)'));
-  screens.register('traceroute',    ph('Traceroute (T-1)'));
-  screens.register('range-test',    ph('Range Test (T-2)'));
-  screens.register('rssi-scan',     ph('訊號頻譜 (T-3)'));
-  screens.register('packet-sniff',  ph('封包嗅探 (T-4)'));
-  screens.register('lora-self-test',ph('LoRa 自我測試 (T-5)'));
-  screens.register('gnss-sky',      ph('GNSS 衛星圖 (T-6)'));
-  screens.register('admin-pair',    ph('配對碼顯示 (T-7)'));
-  screens.register('fw-info',       ph('韌體資訊 (T-8)'));
-  // 遙測 F 群 — F-4 已實作(L1 sweep Phase 2 對應 commit 692d674);
-  // F-1/F-2/F-3 仍是 placeholder。
-  screens.register('telemetry',     ph('遙測 (F-1)'));
-  screens.register('env-sensor',    ph('環境感測 (F-2)'));
-  screens.register('neighbor-info', ph('鄰居資訊 (F-3)'));
-  screens.register('telemetry-hist',new TelemetryHistScreen(renderer, mie, serial));
-  // SOS Z 群(Z-2 啟動已由 SOSScreen 處理,綁 'sos')
-  screens.register('sos-standby',   ph('SOS 待機 (Z-1)'));
-  screens.register('sos-config',    ph('SOS 設定 (Z-3)'));
+
+  // 工具 T 群 — 全部對應 dev-Sblzm 子畫面
+  const mapNav      = new MapNavScreen(renderer, mie, serial);
+  // 補回:D-1 → D-6 路徑(對齊 firmware spec D-1 OK 鎖定 peer 進 D-6)
+  mapScreen._deps = { ...(mapScreen._deps ?? {}), mapNav };
+  const remoteAdmin = new RemoteAdminScreen(renderer, mie, serial);
+  const nodeOps     = new NodeOpsScreen(renderer, mie, serial,
+                        { chatScreen, remoteAdmin, mapNav });
+  // 補回:C-2 → C-3 路徑(SET 鍵)
+  nodeDetail._deps = { ...(nodeDetail._deps ?? {}), nodeOps };
+
+  screens.register('tools',          new ToolsScreen(renderer, mie, serial));
+  screens.register('traceroute',     new TracerouteScreen(renderer, mie, serial));
+  screens.register('range-test',     new RangeTestScreen(renderer, mie, serial));
+  screens.register('rssi-scan',      new SpectrumScreen(renderer, mie, serial));
+  screens.register('packet-sniff',   new SnifferScreen(renderer, mie, serial));
+  screens.register('lora-self-test', new LoraTestScreen(renderer, mie, serial));
+  screens.register('gnss-sky',       new GnssSkyScreen(renderer, mie, serial));
+  screens.register('admin-pair',     new PairingScreen(renderer, mie, serial));
+  screens.register('fw-info',        new FirmwareInfoScreen(renderer, mie, serial));
+
+  // 遙測 F 群 — F-1/F-2/F-3 整合在一個 TelemetryScreen 內 TAB 切頁,
+  // F-4 (歷史曲線) 由 TelemetryHistScreen 獨立。
+  const telemetry = new TelemetryScreen(renderer, mie, serial, { nodeDetail });
+  screens.register('telemetry',      telemetry);
+  screens.register('env-sensor',     telemetry);
+  screens.register('neighbor-info',  telemetry);
+  screens.register('telemetry-hist', new TelemetryHistScreen(renderer, mie, serial));
+
+  // SOS Z 群(Z-2 啟動畫面已由 SOSScreen 處理,綁 'sos')
+  screens.register('sos-standby',    new SosStandbyScreen(renderer, mie, serial));
+  screens.register('sos-config',     new SosConfigScreen(renderer, mie, serial));
+
   // 訊息 A 群
-  screens.register('msg-detail',    ph('訊息詳情 (A-3)'));
-  screens.register('canned',        ph('預設訊息 (A-4)'));
-  // 頻道 B 群
-  screens.register('channel-join',  ph('加入頻道 (B-3)'));
-  screens.register('channel-share', ph('分享頻道 (B-4)'));
+  screens.register('msg-detail',     new MsgDetailScreen(renderer, mie, serial));
+  screens.register('canned',         new CannedScreen(renderer, mie, serial));
+
+  // 頻道 B 群 — 用前面共享的 channelAdd / channelShare 實例,
+  // mesh-channels 透過 meshDeps 直接 setSlot/setChannel 後再 navigate。
+  screens.register('channel-join',   channelAdd);
+  screens.register('channel-share',  channelShare);
+
   // 節點 C 群
-  screens.register('node-actions',  ph('節點操作 (C-3)'));
-  screens.register('my-node',       ph('我的節點 (C-4)'));
-  // 地圖 D 群(D-1=gnss 已有 MapScreen)
-  screens.register('map-layers',    ph('圖層切換 (D-2)'));
-  screens.register('waypoint-list', ph('航點清單 (D-3)'));
-  screens.register('waypoint-detail', ph('航點詳情 (D-4)'));
-  screens.register('waypoint-add',  ph('新增航點 (D-5)'));
-  screens.register('waypoint-nav',  ph('航點導航 (D-6)'));
+  screens.register('node-actions',   nodeOps);
+  screens.register('remote-admin',   remoteAdmin);
+  screens.register('my-node',        new MyNodeScreen(renderer, mie, serial));
+
+  // 地圖 D 群(D-1 = gnss 已有 MapScreen,D-6 = map nav)
+  screens.register('map-layers',     ph('圖層切換 (D-2)'));
+  screens.register('waypoint-list',  ph('航點清單 (D-3)'));
+  screens.register('waypoint-detail',ph('航點詳情 (D-4)'));
+  screens.register('waypoint-add',   ph('新增航點 (D-5)'));
+  screens.register('waypoint-nav',   mapNav);
 
   // 啟動時清掉超過 30 天的草稿(規格 §草稿生命週期)
   cleanupOlderDays(30);

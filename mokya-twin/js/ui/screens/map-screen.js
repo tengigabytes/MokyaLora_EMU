@@ -31,7 +31,7 @@ export class MapScreen extends BaseScreen {
     this._animPhase = 0;
     this._nodes = [];           // populated in onEnter from NODES
     this._selectedNodeIdx = 0;
-    this._deps = deps ?? null;  // { nodeDetail }
+    this._deps = deps ?? null;  // { nodeDetail, mapNav }
   }
 
   /** Snapshot the live NODES registry into a flat shape for rendering. */
@@ -248,14 +248,15 @@ export class MapScreen extends BaseScreen {
     if (key.fn === 'TONE1') { this._zoom = Math.min(4, this._zoom * 1.5); return; }
     if (key.fn === 'TONE2') { this._zoom = Math.max(0.3, this._zoom / 1.5); return; }
     if (key.fn === 'OK') {
-      // First press: cycle through nodes. If the same node is OK'd again
-      // (or the node has a backing NodeInfo), open NodeDetail.
+      // 對齊 dev-Sblzm D-1 規格:OK 鎖定 cursor peer 進 D-6 map-nav。
+      // C-2 詳情仍透過 C-1 nodes list 進入。
       const sel = this._nodes[this._selectedNodeIdx];
-      if (sel?.ref && this._deps?.nodeDetail) {
-        this._deps.nodeDetail.setNode(sel.ref);
-        this.goto('node-detail', 'slide_l');
+      if (sel?.ref && this._deps?.mapNav) {
+        this._deps.mapNav.setTarget(sel.ref);
+        this.goto('waypoint-nav', 'slide_l');
         return;
       }
+      // No mapNav dep → fallback 到 cycle behavior(EMU degrade)
       this._selectedNodeIdx = (this._selectedNodeIdx + 1) % this._nodes.length;
       return;
     }

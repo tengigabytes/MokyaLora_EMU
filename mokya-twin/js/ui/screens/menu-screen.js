@@ -1,45 +1,38 @@
 /**
- * MenuScreen — L-1 九宮格功能表(對齊 doc/ui/01-page-architecture.md)
+ * MenuScreen — L-1 九宮格功能表(嚴格對齊 dev-Sblzm 韌體 launcher_view.c)
  *
- * 由 L-0 桌面 FUNC 鍵呼出。9 個 App 入口分三列三欄:
+ * 由 L-0 桌面 FUNC 鍵呼出。9 個 App 入口三列三欄,行列順序與韌體一致:
  *
- *   訊息(A)  頻道(B)  節點(C)
- *   地圖(D)  遙測(F)  工具(T)
- *   設定(S)  SOS(Z)   系統儀表(EMU)
+ *   Msg(A)   Chan(B)  Nodes(C)
+ *   Map(D)   Tele(F)  Tools(T)
+ *   Set(S)   Me(C-4)  Power(Z-1 placeholder)
  *
- * 第三列右下保留為 EMU 系統儀表入口(原本的 Mesh/感測器/電池/GNSS 等
- * 開發用功能集合到工具或設定底下;L-1 規格九宮格嚴格 9 格)。
+ * 韌體裡只有右下角 Power 是唯一的 placeholder(target == VIEW_ID_COUNT,
+ * 待 power button driver + Z-1 SOS standby);其他八格全部已實作。
  *
  * Keys:
  *   ▲▼◀▶  焦點移動
- *   OK     goto MENU_ITEMS[sel].target — placeholder 上改顯示一行 toast
- *          (對齊 dev-Sblzm L1 sweep Phase 1 commit `049f218`,不再無聲離開
- *          launcher)
+ *   OK     navigate; placeholder 改顯示一行 toast(L1 sweep Phase 1
+ *          commit `049f218`)
  *   BACK   回 L-0 桌面
- *   FUNC   回 L-0 桌面(規格:L-1 內按 FUNC 關閉九宮格)
+ *   FUNC   回 L-0 桌面
  */
 
 import { BaseScreen } from '../screen-manager.js';
 
-// 對齊 doc/ui/01-page-architecture.md L-1 九宮格九 App。
-// 第 9 格 EMU 是模擬器專屬入口(對應原本的 meshtastic 開發儀表),
-// 實機韌體可移除或替換。
-//
-// `placeholder: true` 標記尚未在 EMU 落地的 App,OK 不導航而是顯示
-// inline toast,對齊 dev-Sblzm L1 sweep Phase 1。實機韌體該欄位
-// 對應 view router 中 `target == VIEW_ID_COUNT` 的 grey tile。
+// 對齊 firmware/core1/src/ui/launcher_view.c s_tiles[]。
+// 第 9 格 Power 是唯一 placeholder,OK 顯示 toast 不導航。
 export const MENU_ITEMS = [
   { icon: 'chat',     label: '訊息',   target: 'messages'      },
   { icon: 'mesh-cfg', label: '頻道',   target: 'mesh-channels' },
   { icon: 'nodes',    label: '節點',   target: 'nodes'         },
   { icon: 'gnss',     label: '地圖',   target: 'gnss'          },
-  { icon: 'sensors',  label: '遙測',   target: 'telemetry-hist' },
-  { icon: 'settings', label: '工具',   target: 'tools',          placeholder: true,
-    toast: '工具 App 規劃中 (T-0 ~ T-8 待落地)' },
+  { icon: 'sensors',  label: '遙測',   target: 'telemetry' },
+  { icon: 'settings', label: '工具',   target: 'tools'         },
   { icon: 'mesh-cfg', label: '設定',   target: 'settings'      },
-  { icon: 'battery',  label: 'SOS',    target: 'sos-standby',    placeholder: true,
+  { icon: 'connect',  label: '我的',   target: 'my-node'       },
+  { icon: 'battery',  label: 'Power',  target: '__placeholder', placeholder: true,
     toast: 'SOS app 規劃中 (待 power button + Z-1)' },
-  { icon: 'connect',  label: 'EMU',    target: 'meshtastic'    },
 ];
 
 const COLS = 3;

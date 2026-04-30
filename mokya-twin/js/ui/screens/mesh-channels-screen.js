@@ -76,7 +76,7 @@ export class MeshChannelsScreen extends BaseScreen {
       r.ctx.fillRect(trackX, thumbY, 2, thumbH);
     }
 
-    r.drawLabel(r.W / 2, 235, '▲▼ 選擇 · OK 編輯 · BACK 返回', {
+    r.drawLabel(r.W / 2, 235, 'OK 編輯 · SET 分享 · BACK 返回', {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
     });
   }
@@ -88,8 +88,25 @@ export class MeshChannelsScreen extends BaseScreen {
     if (fn === 'DOWN') { this._sel = (this._sel + 1) % N;     this._ensureVisible(); return; }
     if (fn === 'OK') {
       const ch = CHANNELS[this._sel];
+      const role = ch.fields.find(f => f.key.endsWith('.role'))?.value ?? 'DISABLED';
+      // Empty slot → B-3 channel add; populated → B-2 edit (existing path).
+      if (role === 'DISABLED') {
+        this._deps.channelAdd?.setSlot?.(ch.index);
+        this.goto('channel-join', 'slide_l');
+        return;
+      }
       this._deps.settingsList.setData(`頻道 #${ch.index}`, ch.fields);
       this.goto('mesh-settings-list', 'slide_l');
+      return;
+    }
+    if (fn === 'SET') {
+      // B-4 share — only valid on populated channels.
+      const ch = CHANNELS[this._sel];
+      const role = ch.fields.find(f => f.key.endsWith('.role'))?.value ?? 'DISABLED';
+      if (role === 'DISABLED') return;
+      const name = ch.fields.find(f => f.key.endsWith('.settings.name'))?.value ?? '';
+      this._deps.channelShare?.setChannel?.({ idx: ch.index, name });
+      this.goto('channel-share', 'slide_l');
       return;
     }
     if (fn === 'BACK') { this.goBack(); return; }

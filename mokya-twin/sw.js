@@ -4,7 +4,7 @@
  * Web Serial API (USB) requires browser APIs, no network calls.
  */
 
-const CACHE_VERSION = 'v38';
+const CACHE_VERSION = 'v40';
 const CACHE_NAME    = `mokya-twin-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
@@ -58,6 +58,26 @@ const STATIC_ASSETS = [
   './js/ui/screens/lock-screen.js',
   './js/ui/screens/settings-home-screen.js',
   './js/ui/screens/telemetry-hist-screen.js',
+  './js/ui/screens/telemetry-screen.js',
+  './js/ui/screens/tools-screen.js',
+  './js/ui/screens/traceroute-screen.js',
+  './js/ui/screens/range-test-screen.js',
+  './js/ui/screens/spectrum-screen.js',
+  './js/ui/screens/sniffer-screen.js',
+  './js/ui/screens/lora-test-screen.js',
+  './js/ui/screens/gnss-sky-screen.js',
+  './js/ui/screens/pairing-screen.js',
+  './js/ui/screens/firmware-info-screen.js',
+  './js/ui/screens/canned-screen.js',
+  './js/ui/screens/msg-detail-screen.js',
+  './js/ui/screens/channel-add-screen.js',
+  './js/ui/screens/channel-share-screen.js',
+  './js/ui/screens/node-ops-screen.js',
+  './js/ui/screens/remote-admin-screen.js',
+  './js/ui/screens/my-node-screen.js',
+  './js/ui/screens/map-nav-screen.js',
+  './js/ui/screens/sos-standby-screen.js',
+  './js/ui/screens/sos-config-screen.js',
   './js/serial/meshtastic-serial.js',
   './js/serial/meshtastic-frame.js',
   './js/serial/protobuf.js',

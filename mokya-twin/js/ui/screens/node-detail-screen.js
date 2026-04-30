@@ -291,6 +291,13 @@ export class NodeDetailScreen extends BaseScreen {
     if (fn === 'LEFT')  { this._tab = (this._tab - 1 + 3) % 3; return; }
     if (fn === 'RIGHT') { this._tab = (this._tab + 1) % 3;     return; }
 
+    // SET → C-3 NodeOpsScreen(對齊 firmware:C-2 詳情 → C-3 操作選單)
+    if (fn === 'SET' && this._deps?.nodeOps) {
+      this._deps.nodeOps.setNode(this._node);
+      this.goto('node-actions', 'slide_l');
+      return;
+    }
+
     if (this._tab === TAB_INFO) {
       const fields = buildNodeInfoFields(this._node);
       const N = fields.length;
