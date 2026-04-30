@@ -43,6 +43,7 @@ import { StatusDetailScreen }   from './ui/screens/status-detail-screen.js';
 import { SOSScreen }            from './ui/screens/sos-screen.js';
 import { LockScreen }           from './ui/screens/lock-screen.js';
 import { SettingsHomeScreen }   from './ui/screens/settings-home-screen.js';
+import { TelemetryHistScreen }  from './ui/screens/telemetry-hist-screen.js';
 import { cleanupOlderDays }     from './ui/screens/drafts-store.js';
 import { save as saveMeshConfig }   from './ui/screens/mesh-config-store.js';
 import { save as saveSystemConfig } from './ui/screens/system-settings-store.js';
@@ -189,11 +190,12 @@ async function boot() {
   screens.register('gnss-sky',      ph('GNSS 衛星圖 (T-6)'));
   screens.register('admin-pair',    ph('配對碼顯示 (T-7)'));
   screens.register('fw-info',       ph('韌體資訊 (T-8)'));
-  // 遙測 F 群
+  // 遙測 F 群 — F-4 已實作(L1 sweep Phase 2 對應 commit 692d674);
+  // F-1/F-2/F-3 仍是 placeholder。
   screens.register('telemetry',     ph('遙測 (F-1)'));
   screens.register('env-sensor',    ph('環境感測 (F-2)'));
   screens.register('neighbor-info', ph('鄰居資訊 (F-3)'));
-  screens.register('telemetry-hist',ph('歷史曲線 (F-4)'));
+  screens.register('telemetry-hist',new TelemetryHistScreen(renderer, mie, serial));
   // SOS Z 群(Z-2 啟動已由 SOSScreen 處理,綁 'sos')
   screens.register('sos-standby',   ph('SOS 待機 (Z-1)'));
   screens.register('sos-config',    ph('SOS 設定 (Z-3)'));

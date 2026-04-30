@@ -79,13 +79,21 @@ export class SettingsListScreen extends BaseScreen {
       const y   = LIST_TOP_Y + i * ROW_H;
       const isSel = (idx === this._sel);
 
-      // Row background
-      r.ctx.fillStyle = isSel ? r.C.GREEN_MUTED : '#161618';
+      const isReadonly = !!fld.readonly || fld.type === 'info';
+
+      // Row background — readonly rows use a flatter background to signal
+      // "not editable" (對齊 dev-Sblzm B-2 info row styling)。
+      r.ctx.fillStyle = isSel
+        ? r.C.GREEN_MUTED
+        : (isReadonly ? '#0F1216' : '#161618');
       r.ctx.fillRect(4, y, r.W - 8, ROW_H - 2);
 
       // Label (left)
       r.drawLabel(8, y + 16, fld.label, {
-        font: r.F.ZH_SM, color: isSel ? r.C.GREEN : r.C.TEXT,
+        font: r.F.ZH_SM,
+        color: isSel
+          ? r.C.GREEN
+          : (isReadonly ? r.C.TEXT_DIM : r.C.TEXT),
       });
 
       // Value (right) — colour-coded by type
@@ -124,8 +132,11 @@ export class SettingsListScreen extends BaseScreen {
     if (fn === 'UP')   { this._sel = (this._sel - 1 + N) % N; this._ensureVisible(); return; }
     if (fn === 'DOWN') { this._sel = (this._sel + 1) % N;     this._ensureVisible(); return; }
     if (fn === 'OK') {
+      const fld = this._fields[this._sel];
+      // Readonly info rows (B-2 PSK+ID 摘要等)— OK 為 no-op,不進編輯。
+      if (fld?.readonly || fld?.type === 'info') return;
       if (this._fieldEdit) {
-        this._fieldEdit.setField(this._fields[this._sel], this._saveFn, this._title);
+        this._fieldEdit.setField(fld, this._saveFn, this._title);
         this.goto(this._editTarget, 'slide_l');
       }
       return;
@@ -150,6 +161,7 @@ function formatValue(fld) {
     case 'int':
     case 'float':  v = String(fld.value); if (fld.unit) v += ' ' + fld.unit; break;
     case 'string': v = fld.value === '' ? '(空)' : String(fld.value); break;
+    case 'info':   v = String(fld.value); break;
     default:       v = String(fld.value);
   }
   // Truncate very long values
@@ -159,5 +171,6 @@ function formatValue(fld) {
 
 function colorForValue(fld, C) {
   if (fld.type === 'bool') return fld.value ? C.GREEN : C.TEXT_DIM;
+  if (fld.readonly || fld.type === 'info') return C.TEXT_DIM;
   return C.TEXT;
 }

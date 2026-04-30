@@ -1091,23 +1091,29 @@ export class MokyaRenderer {
       const y = originY + GAP_Y + r * (cellH + GAP_Y);
 
       const isSel = (i === selectedIdx);
+      const item  = items[i];
+      const isPlaceholder = !!item.placeholder;
+      // Placeholder tiles render dim (grey icon + grey label) per dev-Sblzm
+      // L1 sweep Phase 1 — visually signal "規劃中" before user even presses OK.
+      const tileColor = isSel
+        ? this.C.FOCUS
+        : (isPlaceholder ? this.C.TEXT_DIM : this.C.TEXT);
       this.drawCard(x, y, cellW, cellH, {
         radius: 6,
         bg:     isSel ? this.C.FOCUS_BG : this.C.SURFACE,
         border: isSel ? this.C.FOCUS    : this.C.BORDER,
       });
 
-      const item = items[i];
       const ic   = ICONS[item.icon];
       if (ic) {
         const ix = x + ((cellW - ic.w) >> 1);
         const iy = y + 8;
-        this.drawIcon(item.icon, ix, iy, isSel ? this.C.FOCUS : this.C.TEXT);
+        this.drawIcon(item.icon, ix, iy, tileColor);
       }
       if (item.label) {
         this.drawLabel(x + cellW / 2, y + cellH - 8, item.label, {
           font:     this.F.ZH_MD,
-          color:    isSel ? this.C.FOCUS : this.C.TEXT,
+          color:    tileColor,
           align:    'center',
           baseline: 'alphabetic',
         });
