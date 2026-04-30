@@ -391,22 +391,35 @@ export const MODULE_GROUPS = {
 };
 
 // ── Channel slots (8 max) ─────────────────────────────────────────────
-export const CHANNELS = Array.from({ length: 8 }, (_, i) => ({
-  index: i,
-  fields: [
-    f(`channels.${i}.role`, '角色', 'enum',
-      i === 0 ? 'PRIMARY' : 'DISABLED',
-      { options: ['DISABLED','PRIMARY','SECONDARY'] }),
-    f(`channels.${i}.settings.name`,             '名稱',         'string', i === 0 ? 'LongFast' : ''),
-    f(`channels.${i}.settings.psk`,              'PSK',          'string', i === 0 ? '(default)' : '',
-      i === 0 ? { isDangerous: true, dangerWarning: '⚠ 變更主頻道 PSK 將斷聯所有同網節點' } : {}),
-    f(`channels.${i}.settings.id`,               'ID',           'int',    0),
-    f(`channels.${i}.settings.uplink_enabled`,   'Uplink',       'bool',   false),
-    f(`channels.${i}.settings.downlink_enabled`, 'Downlink',     'bool',   false),
-    f(`channels.${i}.settings.module_settings.position_precision`, '位置精度',     'int',  14),
-    f(`channels.${i}.settings.module_settings.is_client_muted`,    'Client muted', 'bool', false),
-  ],
-}));
+//
+// Layout 對齊 dev-Sblzm L1 sweep Phase 3 (commit `af21450`):
+//   6 個可寫欄位:名稱 / 角色 / Uplink / Downlink / 位置精度 / 靜音
+//   1 個唯讀資訊行(底部):PSK 摘要 + 頻道 ID 合併行
+//
+// PSK 與 ID 為唯讀:本機通常透過 B-3「加入頻道」(原 admin packet 編輯)
+// 重新生成,不在此欄位內逐字元編輯。
+export const CHANNELS = Array.from({ length: 8 }, (_, i) => {
+  const psk    = i === 0 ? '(default)' : '(none)';
+  const chId   = i === 0 ? 0x9D58E5B1 : 0;
+  const pskTxt = psk.length > 12 ? psk.slice(0, 11) + '…' : psk;
+  return {
+    index: i,
+    fields: [
+      f(`channels.${i}.settings.name`,             '名稱',         'string', i === 0 ? 'LongFast' : ''),
+      f(`channels.${i}.role`, '角色', 'enum',
+        i === 0 ? 'PRIMARY' : 'DISABLED',
+        { options: ['DISABLED','PRIMARY','SECONDARY'] }),
+      f(`channels.${i}.settings.uplink_enabled`,   'Uplink',       'bool',   false),
+      f(`channels.${i}.settings.downlink_enabled`, 'Downlink',     'bool',   false),
+      f(`channels.${i}.settings.module_settings.position_precision`, '位置精度',     'int',  14),
+      f(`channels.${i}.settings.module_settings.is_client_muted`,    'Client muted', 'bool', false),
+      // Readonly info row — PSK summary + channel id, dim-rendered at bottom.
+      f(`channels.${i}._info`, 'PSK · ID', 'info',
+        `${pskTxt} · 0x${chId.toString(16).padStart(8, '0')}`,
+        { readonly: true }),
+    ],
+  };
+});
 
 // ── Top-level mesh-config menu structure ──────────────────────────────
 export const MESH_CONFIG_MENU = [
