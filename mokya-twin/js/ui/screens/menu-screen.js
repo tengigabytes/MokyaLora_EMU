@@ -27,7 +27,7 @@ export const MENU_ITEMS = [
   { icon: 'mesh-cfg', label: '頻道',   target: 'mesh-channels' },
   { icon: 'nodes',    label: '節點',   target: 'nodes'         },
   { icon: 'gnss',     label: '地圖',   target: 'gnss'          },
-  { icon: 'sensors',  label: '遙測',   target: 'telemetry-hist' },
+  { icon: 'sensors',  label: '遙測',   target: 'telemetry' },
   { icon: 'settings', label: '工具',   target: 'tools'         },
   { icon: 'mesh-cfg', label: '設定',   target: 'settings'      },
   { icon: 'connect',  label: '我的',   target: 'my-node'       },

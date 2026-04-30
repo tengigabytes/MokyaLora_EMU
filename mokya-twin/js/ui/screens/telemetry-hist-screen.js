@@ -13,7 +13,8 @@
  *
  * Keys:
  *   BACK   返回上一層
- *   LEFT/RIGHT  TAB(預留 F-1 ~ F-3 子頁切換,目前其餘子頁尚未實作)
+ *   LEFT   翻到 F-3 鄰居(對齊 firmware F1↔F2↔F3↔F4 循環)
+ *   RIGHT  翻回 F-1 本機遙測
  */
 
 import { BaseScreen } from '../screen-manager.js';
@@ -115,7 +116,7 @@ export class TelemetryHistScreen extends BaseScreen {
       minVal: 0, maxVal: 25,
     });
 
-    r.drawLabel(r.W / 2, 235, 'BACK 返回', {
+    r.drawLabel(r.W / 2, 235, '◀ ▶ 翻頁 · BACK 返回', {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
     });
   }
@@ -143,7 +144,23 @@ export class TelemetryHistScreen extends BaseScreen {
   }
 
   handleKeyTap({ key }) {
-    if (key.fn === 'BACK') this.goBack();
-    if (key.fn === 'FUNC') this.goBack();
+    const fn = key.fn;
+    if (fn === 'LEFT') {
+      // F-4 → F-3:跳到 telemetry 並把 page 設為 3
+      this._enterTelemetryAt(3);
+      return;
+    }
+    if (fn === 'RIGHT') {
+      // F-4 → F-1
+      this._enterTelemetryAt(1);
+      return;
+    }
+    if (fn === 'BACK' || fn === 'FUNC') this.goBack();
+  }
+
+  _enterTelemetryAt(page) {
+    const tel = this._manager?._screens?.get('telemetry');
+    if (tel) tel._page = page;
+    this.goto('telemetry', page === 1 ? 'slide_l' : 'slide_r');
   }
 }

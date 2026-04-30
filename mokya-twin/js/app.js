@@ -191,7 +191,9 @@ async function boot() {
   screens.register('system-field-edit',   sysFieldEdit);
 
   screens.register('sensors',     new SensorsScreen(renderer, mie, serial));
-  screens.register('gnss',        new MapScreen(renderer, mie, serial, { nodeDetail }));
+  // mapScreen 在 mapNav 還沒建立前先 stub,實際 dep 在 D 群初始化後再灌進去。
+  const mapScreen = new MapScreen(renderer, mie, serial, { nodeDetail });
+  screens.register('gnss',        mapScreen);
   screens.register('battery',     new BatteryScreen(renderer, mie, serial));
   // 全域 Modal-style 螢幕(由全域長按事件觸發)
   screens.register('status-detail', new StatusDetailScreen(renderer, mie, serial));
@@ -203,9 +205,13 @@ async function boot() {
 
   // 工具 T 群 — 全部對應 dev-Sblzm 子畫面
   const mapNav      = new MapNavScreen(renderer, mie, serial);
+  // 補回:D-1 → D-6 路徑(對齊 firmware spec D-1 OK 鎖定 peer 進 D-6)
+  mapScreen._deps = { ...(mapScreen._deps ?? {}), mapNav };
   const remoteAdmin = new RemoteAdminScreen(renderer, mie, serial);
   const nodeOps     = new NodeOpsScreen(renderer, mie, serial,
                         { chatScreen, remoteAdmin, mapNav });
+  // 補回:C-2 → C-3 路徑(SET 鍵)
+  nodeDetail._deps = { ...(nodeDetail._deps ?? {}), nodeOps };
 
   screens.register('tools',          new ToolsScreen(renderer, mie, serial));
   screens.register('traceroute',     new TracerouteScreen(renderer, mie, serial));
