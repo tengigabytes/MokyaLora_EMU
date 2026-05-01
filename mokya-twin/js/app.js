@@ -64,6 +64,8 @@ import { MyNodeScreen }         from './ui/screens/my-node-screen.js';
 import { MapNavScreen }         from './ui/screens/map-nav-screen.js';
 import { SosStandbyScreen }     from './ui/screens/sos-standby-screen.js';
 import { SosConfigScreen }      from './ui/screens/sos-config-screen.js';
+import { HwDiagScreen }         from './ui/screens/hw-diag-screen.js';
+import { SysDiagScreen }        from './ui/screens/sys-diag-screen.js';
 import { cleanupOlderDays }     from './ui/screens/drafts-store.js';
 import { save as saveMeshConfig }   from './ui/screens/mesh-config-store.js';
 import { save as saveSystemConfig } from './ui/screens/system-settings-store.js';
@@ -234,6 +236,10 @@ async function boot() {
   // SOS Z 群(Z-2 啟動畫面已由 SOSScreen 處理,綁 'sos')
   screens.register('sos-standby',    new SosStandbyScreen(renderer, mie, serial));
   screens.register('sos-config',     new SosConfigScreen(renderer, mie, serial));
+
+  // 診斷(對齊 dev-Sblzm 2d0b41c launcher 第 4 列)
+  screens.register('hw-diag',        new HwDiagScreen(renderer, mie, serial));
+  screens.register('sys-diag',       new SysDiagScreen(renderer, mie, serial));
 
   // 訊息 A 群
   screens.register('msg-detail',     new MsgDetailScreen(renderer, mie, serial));
