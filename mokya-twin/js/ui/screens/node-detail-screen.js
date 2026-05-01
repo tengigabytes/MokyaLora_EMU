@@ -107,13 +107,29 @@ export class NodeDetailScreen extends BaseScreen {
         font: r.F.ZH_SM, color: r.C.GREEN, align: 'center', maxWidth: r.W - 60,
       });
     } else {
-      let hint;
-      if      (this._tab === TAB_INFO)    hint = '◀▶ 切換 · ▲▼ 捲動 · BACK 返回';
-      else if (this._tab === TAB_ACTIONS) hint = '◀▶ 切換 · ▲▼ 選擇 · OK 執行 · BACK 返回';
-      else                                hint = '◀▶ 切換 · ▲▼ 捲動 · BACK 返回';
-      r.drawLabel(r.W / 2, 235, hint, {
-        font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
-      });
+      let hints;
+      if (this._tab === TAB_INFO) {
+        hints = [
+          { key: '◀▶', label: '切換' },
+          { key: '▲▼', label: '捲動' },
+          { key: 'BACK', label: '返回' },
+        ];
+      } else if (this._tab === TAB_ACTIONS) {
+        hints = [
+          { key: '◀▶', label: '切換' },
+          { key: '▲▼', label: '選擇' },
+          { key: 'OK', label: '執行' },
+          { key: 'BACK', label: '返回' },
+        ];
+      } else {
+        hints = [
+          { key: '◀▶', label: '切換' },
+          { key: '▲▼', label: '捲動' },
+          { key: 'SET', label: '操作' },
+          { key: 'BACK', label: '返回' },
+        ];
+      }
+      r.drawHintBar(hints);
     }
   }
 
