@@ -262,18 +262,35 @@ export class NodeDetailScreen extends BaseScreen {
       const ev = events[top + i];
       const y = startY + i * ROW_H;
       const rel = formatRelativeTime(ev.t_ms);
+      // Prefix + content drawn as ONE label so the rel field can grow without
+      // colliding with a fixed-x content label (MIE Unifont CJK is 16 px wide,
+      // so "TR 5 分" reaches x≈64 and would punch through any path label
+      // placed at x<90). Prefix uses prefix colour for the first ~10 chars,
+      // rest of the line uses content colour — but since drawLabel only takes
+      // one colour, paint the prefix first then the content at a measured x.
+      const prefix = ev.kind === 'tr' ? `TR ${rel}` : `AK ${rel}`;
+      const prefixColor = ev.kind === 'tr'
+        ? r.C.GREEN
+        : (ev.e.ok ? r.C.GREEN : r.C.DANGER);
+      r.drawLabel(8, y + 13, prefix, { font: r.F.XS, color: prefixColor });
+
+      // Measure prefix width so content starts after a 6 px gap.
+      r.ctx.font = r.F.XS;
+      const prefixW = r.ctx.measureText(prefix).width;
+      const contentX = 8 + Math.ceil(prefixW) + 6;
+
       if (ev.kind === 'tr') {
         const e = ev.e;
         const path = e.hops.map(h => h.replace(/^!/, '')).join('→');
-        r.drawLabel(8,  y + 13, `TR ${rel}`, { font: r.F.XS, color: r.C.GREEN });
-        r.drawLabel(60, y + 13, path,        { font: r.F.XS, color: r.C.TEXT, maxWidth: r.W - 70 });
+        r.drawLabel(contentX, y + 13, path, {
+          font: r.F.XS, color: r.C.TEXT, maxWidth: r.W - contentX - 4,
+        });
       } else {
         const e = ev.e;
         const ico = e.ok ? '✓' : '✗';
         const lat = e.ok ? `${e.latency_ms} ms` : '逾時';
         const hopNote = e.hop > 1 ? ` (hop ${e.hop})` : '';
-        r.drawLabel(8,  y + 13, `AK ${rel}`, { font: r.F.XS, color: e.ok ? r.C.GREEN : r.C.DANGER });
-        r.drawLabel(60, y + 13, `${ico} ${lat}${hopNote}`, {
+        r.drawLabel(contentX, y + 13, `${ico} ${lat}${hopNote}`, {
           font: r.F.XS, color: e.ok ? r.C.TEXT : r.C.DANGER,
         });
       }
