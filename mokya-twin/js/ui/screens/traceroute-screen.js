@@ -1,14 +1,17 @@
 /**
  * TracerouteScreen — T-1 Traceroute(對齊 firmware traceroute_view.c)
  *
- * 螢幕 320 × 240 = status bar 16 + panel 224(可用 y=16..239,扣 hint 16 = y=16..223):
- *   y  16..29   header  "T-1 Traceroute  (N peer)"   (panel y=0..15)
- *   y  32..141  5 visible peer rows × 22 px           (panel y=16..125)
- *   y 143       1 px divider                          (panel y=127)
- *   y 145..222  result panel ~78 px:peer + fwd + back + hint
- *   y 224..239  hint bar(global)
+ * 對 MIE Unifont 重排 — 16 px glyph + ascender 13:每段給 3-5 px breathing
+ * room 避免 glyph 邊到邊互相貼到看似重疊。
  *
- * EMU 模擬:OK 模擬 send,2 秒後給該 peer 隨機產生 mock route reply。
+ *   y   0..15   status bar(全域)
+ *   y  17..33   header glyph    baseline 30
+ *   y  34..36   3 px pad
+ *   y  36..132  5 list rows × 20 px,baselines 49/69/89/109/129
+ *               glyphs 36..52, 56..72, 76..92, 96..112, 116..132
+ *   y 133..139  pad + divider y=140
+ *   y 143..219  4 result rows × 20 px,baselines 156/176/196/216
+ *   y 224..239  hint bar(全域)
  *
  * Keys: UP/DOWN 選 peer · OK 送出 traceroute · BACK 回 T-0
  */
@@ -17,12 +20,12 @@ import { BaseScreen } from '../screen-manager.js';
 import { defaultStatusOpts } from './_chrome.js';
 import { NODES }     from './nodes-data.js';
 
-const HEADER_Y          = 30;     // title baseline (1 px below status bar border)
-const LIST_FIRST_BASE   = 47;     // row 0 baseline (panel y=31; glyph top y=34)
-const LIST_ROW_H        = 22;
+const HEADER_Y          = 30;     // glyph top y=17(1 px clear of status border)
+const LIST_FIRST_BASE   = 49;     // row 0 box y=36, glyph top y=36
+const LIST_ROW_H        = 20;
 const LIST_ROWS         = 5;
-const DIVIDER_Y         = 143;    // just below row 4 visual bottom
-const RESULT_FIRST_BASE = 158;    // first result line baseline (panel y=142)
+const DIVIDER_Y         = 140;    // 8 px below row 4 glyph bottom
+const RESULT_FIRST_BASE = 156;    // box y=143, glyph top y=143
 const RESULT_ROW_H      = 20;
 
 export class TracerouteScreen extends BaseScreen {
