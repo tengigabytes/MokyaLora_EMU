@@ -15,8 +15,8 @@
 import { BaseScreen } from '../screen-manager.js';
 import { defaultStatusOpts } from './_chrome.js';
 
-const CX = 160, CY = 100;
-const R_OUT = 70;
+const CX = 160, CY = 105;
+const R_OUT = 60;            // shrink so N label clears title and S label clears summary rows
 
 function genSats() {
   // 12 mock satellites with deterministic-ish placement.
@@ -49,7 +49,7 @@ export class GnssSkyScreen extends BaseScreen {
     r.drawStatusBar(defaultStatusOpts(this.serial));
 
     const view = this._sats.length;
-    r.drawLabel(4, 24, `T-6 GNSS Sky  view=${view}`, {
+    r.drawLabel(4, 30, `T-6 GNSS Sky  view=${view}`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 

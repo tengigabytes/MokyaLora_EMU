@@ -13,7 +13,7 @@ import { BaseScreen } from '../screen-manager.js';
 import { defaultStatusOpts } from './_chrome.js';
 
 const ROW_H = 24;
-const ROW_TOP = 50;
+const ROW_TOP = 38;
 const ROLES = ['PRIMARY', 'SECONDARY'];
 
 function genRandomPsk() {
@@ -46,7 +46,7 @@ export class ChannelAddScreen extends BaseScreen {
 
     r.drawStatusBar(defaultStatusOpts(this.serial));
 
-    r.drawLabel(4, 24, `B-3 加入頻道  slot=${this._slot}`, {
+    r.drawLabel(4, 30, `B-3 加入頻道  slot=${this._slot}`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 

@@ -49,7 +49,7 @@ export class SpectrumScreen extends BaseScreen {
       .sort((a, b) => b.snr - a.snr);
 
     // Header
-    r.drawLabel(4, 24, `T-3 訊號頻譜  ${peers.length} peers (SNR known)`, {
+    r.drawLabel(4, 30, `T-3 訊號頻譜  ${peers.length} peers (SNR known)`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
@@ -68,7 +68,7 @@ export class SpectrumScreen extends BaseScreen {
         const hopStr = p.hops === 0xFF ? '--' : `${p.hops}h`;
         const ageStr = formatAge(p.age);
         const line = `${p.name.padEnd(9)} ${snrStr.padEnd(5)} ${bar} ${hopStr.padEnd(3)} ${ageStr}`;
-        const y = 46 + i * ROW_H + 14;
+        const y = 32 + i * ROW_H + 14;
         r.drawLabel(4, y, line, {
           font: r.F.MONO_MD ?? r.F.ZH_SM, color: r.C.TEXT,
         });

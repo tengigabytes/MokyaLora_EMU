@@ -22,7 +22,7 @@ const ACTIONS = [
   { label: 'NodeDB reset',        warn: '清節點表 (保留 favorites)' },
 ];
 const ROW_H = 24;
-const ROW_TOP = 50;
+const ROW_TOP = 38;
 const ARM_TIMEOUT_MS = 3000;
 
 export class RemoteAdminScreen extends BaseScreen {
@@ -52,7 +52,7 @@ export class RemoteAdminScreen extends BaseScreen {
     r.drawStatusBar(defaultStatusOpts(this.serial));
 
     const target = this._node?.user?.short_name ?? '(no target)';
-    r.drawLabel(4, 24, `C-3 Remote Admin -> ${target}`, {
+    r.drawLabel(4, 30, `C-3 Remote Admin -> ${target}`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 

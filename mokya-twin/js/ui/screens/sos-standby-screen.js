@@ -22,7 +22,7 @@ export class SosStandbyScreen extends BaseScreen {
 
     r.drawStatusBar(defaultStatusOpts(this.serial));
 
-    r.drawLabel(4, 24, 'Z-1 SOS 待機', {
+    r.drawLabel(4, 30, 'Z-1 SOS 待機', {
       font: r.F.ZH_SM, color: r.C.WARNING,
     });
 

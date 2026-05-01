@@ -62,7 +62,7 @@ export class ChannelShareScreen extends BaseScreen {
 
     r.drawStatusBar(defaultStatusOpts(this.serial));
 
-    r.drawLabel(4, 24, `B-4 分享 ch${this._channel.idx}  ${this._channel.name}`, {
+    r.drawLabel(4, 30, `B-4 分享 ch${this._channel.idx}  ${this._channel.name}`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 

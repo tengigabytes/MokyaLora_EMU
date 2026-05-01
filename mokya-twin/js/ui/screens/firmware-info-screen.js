@@ -12,8 +12,8 @@ import { BaseScreen } from '../screen-manager.js';
 import { defaultStatusOpts } from './_chrome.js';
 
 const ROW_H = 20;
-const HEADER_Y = 24;
-const ROW_TOP = 50;
+const HEADER_Y = 30;
+const ROW_TOP = 44;
 
 export class FirmwareInfoScreen extends BaseScreen {
   render(now) {

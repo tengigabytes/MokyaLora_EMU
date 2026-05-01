@@ -66,7 +66,7 @@ export class MapNavScreen extends BaseScreen {
     } else {
       header = `D-6 -> ${t.user?.short_name ?? '?'} ${t.user?.id ?? '!?'}`;
     }
-    r.drawLabel(4, 24, header, {
+    r.drawLabel(4, 30, header, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 

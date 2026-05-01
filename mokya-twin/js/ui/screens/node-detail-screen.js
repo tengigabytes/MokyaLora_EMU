@@ -21,6 +21,7 @@ import {
   pushAckResult, pushTracerouteResult, pushSignalSample, formatRelativeTime,
 } from './nodes-data.js';
 import { SerialState } from '../../serial/meshtastic-serial.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 const TAB_INFO    = 0;
 const TAB_ACTIONS = 1;
@@ -58,11 +59,7 @@ export class NodeDetailScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75,
-      rssi:    -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     if (!this._node) {
       r.drawLabel(r.W / 2, 120, '(無節點)', {
@@ -184,12 +181,13 @@ export class NodeDetailScreen extends BaseScreen {
 
   // ── History tab ─────────────────────────────────────────────
   _renderHistory(r, n) {
-    // Layout (y=64..220 content area):
-    //   64..104  RSSI sparkline (h=40)
-    //   106..120 RSSI stats line
-    //   122..136 SNR stats line
-    //   140..150 Section divider + label
-    //   150..220 Traceroute history (scrollable, ~3 rows × 22 px)
+    // Layout (y=64..220 content area) — 對齊 firmware F-4 chart 慣例:
+    //   64..104  RSSI sparkline (h=40)  · label 提到 chart 上方
+    //   108..122 RSSI stats line  (避開 chart 底邊)
+    //   126..140 SNR stats line
+    //   146..147 Section divider
+    //   148..162 Section header label
+    //   164..220 Traceroute history (scrollable, 4 rows × 14 px)
     const samples = n.signal_history ?? [];
     if (samples.length < 2) {
       r.drawLabel(r.W / 2, 130, '(尚無歷史資料)', {
@@ -198,32 +196,32 @@ export class NodeDetailScreen extends BaseScreen {
       return;
     }
 
-    // RSSI chart
+    // RSSI chart — labels 改置中於 chart 頂端 padding 區,不再壓到波形上
     const rssiArr = samples.map(s => s.rssi);
     r.drawCard(4, 64, r.W - 8, 40, { radius: 4, bg: r.C.SURFACE, border: r.C.BORDER });
-    r.drawLineChart(8, 68, r.W - 16, 32, rssiArr, {
+    r.drawLineChart(8, 76, r.W - 16, 24, rssiArr, {
       lineColor: r.C.GREEN, fillColor: 'rgba(48,209,88,0.10)',
       minVal: -120, maxVal: -50, gridLines: 3,
     });
-    r.drawLabel(7, 76, 'RSSI', { font: r.F.XS, color: r.C.TEXT_DIM });
-    r.drawLabel(r.W - 8, 76, `${samples.length} 筆`, {
+    r.drawLabel(8, 73, 'RSSI', { font: r.F.XS, color: r.C.TEXT_DIM });
+    r.drawLabel(r.W - 8, 73, `${samples.length} 筆`, {
       font: r.F.XS, color: r.C.TEXT_DIM, align: 'right',
     });
 
-    // Stats
+    // Stats — 起始 y=120(=chart card 底 +16)避免文字頂到 chart 邊框
     const rssiStats = stats(rssiArr);
     const snrStats  = stats(samples.map(s => s.snr));
-    r.drawLabel(8, 116, `RSSI 現${rssiStats.last} / 平均${rssiStats.avg} / 最低${rssiStats.min} dBm`, {
+    r.drawLabel(8, 120, `RSSI 現${rssiStats.last} / 平均${rssiStats.avg} / 最低${rssiStats.min} dBm`, {
       font: r.F.ZH_SM, color: rssiColor(rssiStats.last, r.C),
     });
-    r.drawLabel(8, 132, `SNR  現${fmtSnr(snrStats.last)} / 平均${fmtSnr(snrStats.avg)} / 最低${fmtSnr(snrStats.min)} dB`, {
+    r.drawLabel(8, 138, `SNR  現${fmtSnr(snrStats.last)} / 平均${fmtSnr(snrStats.avg)} / 最低${fmtSnr(snrStats.min)} dB`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
     // Traceroute / ACK 測試 section header
     r.ctx.fillStyle = r.C.BORDER;
-    r.ctx.fillRect(4, 144, r.W - 8, 1);
-    r.drawLabel(8, 158, 'Traceroute · sendtext --ack', {
+    r.ctx.fillRect(4, 148, r.W - 8, 1);
+    r.drawLabel(8, 162, 'Traceroute · sendtext --ack', {
       font: r.F.ZH_SM, color: r.C.GREEN_DIM,
     });
 
@@ -233,9 +231,9 @@ export class NodeDetailScreen extends BaseScreen {
       ...(n.ack_history        ?? []).map(e => ({ kind: 'ak', t_ms: e.t_ms, e })),
     ].sort((a, b) => b.t_ms - a.t_ms);
 
-    const ROW_H = 16;
+    const ROW_H = 14;
     const VISIBLE = 4;
-    const startY = 162;
+    const startY = 168;
     const top = Math.max(0, Math.min(this._histScroll, events.length - VISIBLE));
     const rows = Math.min(VISIBLE, events.length - top);
     for (let i = 0; i < rows; i++) {

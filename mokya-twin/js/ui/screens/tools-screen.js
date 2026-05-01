@@ -11,7 +11,7 @@ import { BaseScreen } from '../screen-manager.js';
 import { defaultStatusOpts } from './_chrome.js';
 
 const ROW_H = 18;
-const HEADER_Y = 24;
+const HEADER_Y = 30;
 
 // 順序與韌體 tools_view.c s_entries[] 相同。
 // EMU 沒有 RF debug overlay / Font test 對應，標記為 placeholder。

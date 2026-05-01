@@ -25,7 +25,7 @@ const CANNED = [
 ];
 
 const ROW_H = 24;
-const ROW_TOP = 50;
+const ROW_TOP = 38;
 
 export class CannedScreen extends BaseScreen {
   constructor(renderer, mie, serial) {
@@ -53,7 +53,7 @@ export class CannedScreen extends BaseScreen {
     const header = this._target?.short_name
       ? `Send to ${this._target.short_name}`
       : 'Quick send  (no peer)';
-    r.drawLabel(4, 24, header, {
+    r.drawLabel(4, 30, header, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 

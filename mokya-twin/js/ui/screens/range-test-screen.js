@@ -46,7 +46,7 @@ export class RangeTestScreen extends BaseScreen {
     r.drawStatusBar(defaultStatusOpts(this.serial));
 
     // Title
-    r.drawLabel(4, 24, `T-2 Range Test  total=${this._totalHits}  mod:OFF`, {
+    r.drawLabel(4, 30, `T-2 Range Test  total=${this._totalHits}  mod:OFF`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 

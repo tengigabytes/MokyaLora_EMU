@@ -17,7 +17,7 @@ import { BaseScreen } from '../screen-manager.js';
 import { defaultStatusOpts } from './_chrome.js';
 
 const ROW_H = 24;
-const ROW_TOP = 50;
+const ROW_TOP = 38;
 
 export class LoraTestScreen extends BaseScreen {
   constructor(renderer, mie, serial) {
@@ -48,7 +48,7 @@ export class LoraTestScreen extends BaseScreen {
 
     r.drawStatusBar(defaultStatusOpts(this.serial));
 
-    r.drawLabel(4, 24, 'T-5 LoRa 自我測試  (passive metrics)', {
+    r.drawLabel(4, 30, 'T-5 LoRa 自我測試  (passive metrics)', {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 

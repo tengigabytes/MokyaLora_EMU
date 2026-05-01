@@ -76,15 +76,15 @@ export class TelemetryHistScreen extends BaseScreen {
     r.drawStatusBar(defaultStatusOpts(this.serial));
 
     // Title bar (16px) — matches firmware TITLE_H
-    r.drawLabel(r.W / 2, 24, 'F-4 歷史曲線 · 48 min', {
+    r.drawLabel(r.W / 2, 30, 'F-4 歷史曲線 · 48 min', {
       font: r.F.ZH_MD, color: r.C.TEXT, align: 'center',
     });
 
     // Three stacked charts — mirror firmware F4_CHART_H = 70 + GAP 2.
     // Available height: y=42..222 (180px) → 3 charts × ~58px + 2 gaps.
     const X = 6, W = r.W - 12;
-    const TOP = 44;
-    const CH_H = 58;
+    const TOP = 40;
+    const CH_H = 56;
     const GAP = 4;
 
     const last = this._buf[this._buf.length - 1] ?? { soc: 0, snr: 0, air: 0 };

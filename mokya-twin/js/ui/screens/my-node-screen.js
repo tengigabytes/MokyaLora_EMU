@@ -20,7 +20,7 @@ import { defaultStatusOpts } from './_chrome.js';
 import { NODES }     from './nodes-data.js';
 
 const ROW_H = 20;
-const ROW_TOP = 50;
+const ROW_TOP = 36;
 
 export class MyNodeScreen extends BaseScreen {
   render(now) {
@@ -33,7 +33,7 @@ export class MyNodeScreen extends BaseScreen {
     const my = NODES.find(n => n.user?.id === myId)
               ?? { user: { short_name: 'EMU', long_name: 'MokyaLora EMU', role: 'CLIENT', hw_model: 'MOKYA_LORA' } };
     const sn = my.user.short_name ?? 'Me';
-    r.drawLabel(4, 24, `${sn} ${myId}`, {
+    r.drawLabel(4, 30, `${sn} ${myId}`, {
       font: r.F.ZH_SM, color: r.C.FOCUS,
     });
 

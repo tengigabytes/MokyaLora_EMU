@@ -1,11 +1,12 @@
 /**
  * TracerouteScreen — T-1 Traceroute(對齊 firmware traceroute_view.c)
  *
- * Layout(panel 320 × 224):
- *   y   0..15  header  "T-1 Traceroute  (N peer)" / "pending pid=…  Ns"
- *   y  16..125 5 visible peer rows × 22 px
- *   y 127      divider
- *   y 129..223 result panel:peer + fwd hops + back hops + hint
+ * 螢幕 320 × 240 = status bar 16 + panel 224(可用 y=16..239,扣 hint 16 = y=16..223):
+ *   y  16..29   header  "T-1 Traceroute  (N peer)"   (panel y=0..15)
+ *   y  32..141  5 visible peer rows × 22 px           (panel y=16..125)
+ *   y 143       1 px divider                          (panel y=127)
+ *   y 145..222  result panel ~78 px:peer + fwd + back + hint
+ *   y 224..239  hint bar(global)
  *
  * EMU 模擬:OK 模擬 send,2 秒後給該 peer 隨機產生 mock route reply。
  *
@@ -16,20 +17,21 @@ import { BaseScreen } from '../screen-manager.js';
 import { defaultStatusOpts } from './_chrome.js';
 import { NODES }     from './nodes-data.js';
 
-const HEADER_H = 16;
-const LIST_TOP = 18;
-const LIST_ROW_H = 22;
-const LIST_ROWS = 5;
-const RESULT_TOP = 132;
-const RESULT_ROW_H = 20;
+const HEADER_Y          = 30;     // title baseline (1 px below status bar border)
+const LIST_FIRST_BASE   = 47;     // row 0 baseline (panel y=31; glyph top y=34)
+const LIST_ROW_H        = 22;
+const LIST_ROWS         = 5;
+const DIVIDER_Y         = 143;    // just below row 4 visual bottom
+const RESULT_FIRST_BASE = 158;    // first result line baseline (panel y=142)
+const RESULT_ROW_H      = 20;
 
 export class TracerouteScreen extends BaseScreen {
   constructor(renderer, mie, serial) {
     super(renderer, mie, serial);
     this._sel = 0;
     this._scroll = 0;
-    this._pending = null;       // { peer, pid, sentMs }
-    this._routes = new Map();   // peer.user.id → { fwd: [{name,snr}], back: [{name,snr}], epoch }
+    this._pending = null;
+    this._routes = new Map();
   }
 
   onEnter(from) {
@@ -54,7 +56,6 @@ export class TracerouteScreen extends BaseScreen {
     if (!this._pending) return;
     const dt = performance.now() - this._pending.sentMs;
     if (dt < 2000) return;
-    // Synthesize a route reply: 1-3 random hops with random SNRs.
     const peers = this._peers();
     const targetIdx = peers.findIndex(p => p.user.id === this._pending.peer);
     if (targetIdx < 0) { this._pending = null; return; }
@@ -88,15 +89,15 @@ export class TracerouteScreen extends BaseScreen {
     } else {
       header = `T-1 Traceroute  (${peers.length} peer)`;
     }
-    r.drawLabel(4, 24, header, {
+    r.drawLabel(4, HEADER_Y, header, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
     // List
     for (let i = 0; i < LIST_ROWS; i++) {
       const idx = this._scroll + i;
-      const y = LIST_TOP + 30 + i * LIST_ROW_H + 14;
       if (idx >= peers.length) continue;
+      const y = LIST_FIRST_BASE + i * LIST_ROW_H;
       const p = peers[idx];
       const focused = (idx === this._sel);
       const hops = p.hops_away ?? '?';
@@ -108,23 +109,23 @@ export class TracerouteScreen extends BaseScreen {
       });
     }
 
-    // Divider
+    // Divider — 1 px line above result panel
     r.ctx.fillStyle = r.C.BORDER;
-    r.ctx.fillRect(4, RESULT_TOP - 4, r.W - 8, 1);
+    r.ctx.fillRect(4, DIVIDER_Y, r.W - 8, 1);
 
     // Result panel
     const peer = peers[this._sel];
     if (!peer) {
-      r.drawLabel(4, RESULT_TOP + 14, '(no peer)', { font: r.F.ZH_SM, color: r.C.TEXT });
+      r.drawLabel(4, RESULT_FIRST_BASE, '(no peer)', { font: r.F.ZH_SM, color: r.C.TEXT });
     } else {
       const route = this._routes.get(peer.user.id);
       const nm = peer.user.short_name ?? '?';
       if (!route) {
-        r.drawLabel(4, RESULT_TOP + 14, `Peer ${nm}  (no route reply yet)`, {
+        r.drawLabel(4, RESULT_FIRST_BASE, `Peer ${nm}  (no route reply yet)`, {
           font: r.F.ZH_SM, color: r.C.TEXT,
         });
       } else {
-        r.drawLabel(4, RESULT_TOP + 14, `Peer ${nm}  fwd=${route.fwd.length}  back=${route.back.length}  ep=${route.epoch}`, {
+        r.drawLabel(4, RESULT_FIRST_BASE, `Peer ${nm}  fwd=${route.fwd.length}  back=${route.back.length}  ep=${route.epoch}`, {
           font: r.F.ZH_SM, color: r.C.TEXT,
         });
         const fwdLine = route.fwd.length
@@ -133,14 +134,19 @@ export class TracerouteScreen extends BaseScreen {
         const backLine = route.back.length
           ? `back: ${route.back.map(h => h.name).join(' -> ')}  (${route.back.map(h => (h.snr >= 0 ? '+' : '') + h.snr.toFixed(1)).join(',')} dB)`
           : 'back: (no return path)';
-        r.drawLabel(4, RESULT_TOP + 14 + RESULT_ROW_H, fwdLine.slice(0, 50), { font: r.F.ZH_SM, color: r.C.TEXT });
-        r.drawLabel(4, RESULT_TOP + 14 + RESULT_ROW_H * 2, backLine.slice(0, 50), { font: r.F.ZH_SM, color: r.C.TEXT });
+        r.drawLabel(4, RESULT_FIRST_BASE + RESULT_ROW_H,     fwdLine.slice(0, 50), { font: r.F.ZH_SM, color: r.C.TEXT });
+        r.drawLabel(4, RESULT_FIRST_BASE + RESULT_ROW_H * 2, backLine.slice(0, 50), { font: r.F.ZH_SM, color: r.C.TEXT });
       }
-      const hint = route ? 'OK 重發  UP/DOWN 選人  BACK 工具' : 'OK 發送  UP/DOWN 選人  BACK 工具';
-      r.drawLabel(4, RESULT_TOP + 14 + RESULT_ROW_H * 3, hint, {
+      const hint = route ? 'OK 重發  UP/DOWN 選人' : 'OK 發送  UP/DOWN 選人';
+      r.drawLabel(4, RESULT_FIRST_BASE + RESULT_ROW_H * 3, hint, {
         font: r.F.ZH_SM, color: r.C.TEXT_DIM,
       });
     }
+
+    r.drawHintBar([
+      { key: 'OK',   label: '送出' },
+      { key: 'BACK', label: '工具' },
+    ]);
   }
 
   handleKeyTap({ key }) {

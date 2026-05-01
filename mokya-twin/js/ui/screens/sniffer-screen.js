@@ -16,10 +16,11 @@
 import { BaseScreen } from '../screen-manager.js';
 import { defaultStatusOpts } from './_chrome.js';
 
-const HEADER_Y = 24;
-const ROW_TOP = 50;
+const HEADER_Y = 30;
+const ROW_FIRST_BASE = 47;        // panel y=31, glyph top y=34
 const ROW_H = 24;
-const VISIBLE_ROWS = 7;
+const VISIBLE_ROWS = 6;           // 6 rows × 24 = 144 (panel y=31..175)
+const DETAIL_BASE = 195;          // detail line baseline (panel y=179)
 
 // PortNum mnemonic table (subset).
 const PORTNUM_MAP = {
@@ -75,13 +76,14 @@ export class SnifferScreen extends BaseScreen {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
-    // List
+    // List — show VISIBLE_ROWS rows starting at cursor scroll window
+    const top = Math.max(0, Math.min(this._cursor - 2, this._ring.length - VISIBLE_ROWS));
     for (let i = 0; i < VISIBLE_ROWS; i++) {
-      const idx = i;
+      const idx = top + i;
       if (idx >= this._ring.length) break;
       const e = this._ring[idx];
       const focused = (idx === this._cursor);
-      const y = ROW_TOP + i * ROW_H + 14;
+      const y = ROW_FIRST_BASE + i * ROW_H;
       const portM = PORTNUM_MAP[e.port] ?? String(e.port).padStart(3, '0');
       const snrStr = (e.snr >= 0 ? '+' : '') + e.snr.toFixed(1);
       const line = `${focused ? '>' : ' '}${e.from.slice(0, 8).padEnd(8)} ${portM.padEnd(3)} ${e.hex.slice(0, 16)} ${snrStr}`;
@@ -91,14 +93,14 @@ export class SnifferScreen extends BaseScreen {
       });
     }
 
-    // Detail line
+    // Detail line — y=195 baseline (glyph 182..198) clear of last row (162..178)
     const cur = this._ring[this._cursor];
     const detail = cur
       ? (cur.moreHex
           ? `more: ${cur.moreHex}  RSSI=${cur.rssi}  ep=${cur.ep}`
           : `(none)  RSSI=${cur.rssi}  ep=${cur.ep}`)
       : '(no packets — wait for cascade RX)';
-    r.drawLabel(4, 198, detail, {
+    r.drawLabel(4, DETAIL_BASE, detail, {
       font: r.F.MONO_MD ?? r.F.ZH_SM, color: r.C.TEXT,
     });
 

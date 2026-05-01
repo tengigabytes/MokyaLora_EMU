@@ -10,7 +10,7 @@ import { BaseScreen } from '../screen-manager.js';
 import { defaultStatusOpts } from './_chrome.js';
 
 const ROW_H = 26;
-const ROW_TOP = 50;
+const ROW_TOP = 38;
 
 const INTERVALS = [10, 15, 30, 60, 120];
 const CHANNELS  = ['PRIMARY', 'EMERGENCY', 'ALL'];
@@ -31,7 +31,7 @@ export class SosConfigScreen extends BaseScreen {
 
     r.drawStatusBar(defaultStatusOpts(this.serial));
 
-    r.drawLabel(4, 24, 'Z-3 SOS 設定', {
+    r.drawLabel(4, 30, 'Z-3 SOS 設定', {
       font: r.F.ZH_SM, color: r.C.WARNING,
     });
 

@@ -29,13 +29,13 @@ export class MsgDetailScreen extends BaseScreen {
 
     const m = this._msg;
     if (!m) {
-      r.drawLabel(4, 24, 'DM detail', { font: r.F.ZH_SM, color: r.C.FOCUS });
+      r.drawLabel(4, 30, 'DM detail', { font: r.F.ZH_SM, color: r.C.FOCUS });
       r.drawLabel(4, 60, '(no message)', { font: r.F.ZH_SM, color: r.C.TEXT_DIM });
       r.drawLabel(4, 90, 'BACK to return.', { font: r.F.ZH_SM, color: r.C.TEXT_DIM });
       return;
     }
 
-    r.drawLabel(4, 24, `DM detail / ${m.peerId ?? '!?'}`, {
+    r.drawLabel(4, 30, `DM detail / ${m.peerId ?? '!?'}`, {
       font: r.F.ZH_SM, color: r.C.FOCUS,
     });
 

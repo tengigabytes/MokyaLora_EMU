@@ -14,7 +14,7 @@ import { defaultStatusOpts } from './_chrome.js';
 import { NODES } from './nodes-data.js';
 
 const ROW_H = 24;
-const ROW_TOP = 50;
+const ROW_TOP = 38;
 
 export class TelemetryScreen extends BaseScreen {
   constructor(renderer, mie, serial, deps = {}) {
@@ -46,7 +46,7 @@ export class TelemetryScreen extends BaseScreen {
 
   _renderF1() {
     const r = this.r;
-    r.drawLabel(4, 24, 'F-1 本機遙測 (1/3)', {
+    r.drawLabel(4, 30, 'F-1 本機遙測 (1/3)', {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
     const rows = [
@@ -69,7 +69,7 @@ export class TelemetryScreen extends BaseScreen {
 
   _renderF2() {
     const r = this.r;
-    r.drawLabel(4, 24, 'F-2 環境感測 (2/3)', {
+    r.drawLabel(4, 30, 'F-2 環境感測 (2/3)', {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
     const rows = [
@@ -93,7 +93,7 @@ export class TelemetryScreen extends BaseScreen {
   _renderF3() {
     const r = this.r;
     const peers = NODES.filter(n => n.user?.id !== this.serial?.myNodeId);
-    r.drawLabel(4, 24, `F-3 鄰居資訊 (3/3)  共 ${peers.length}`, {
+    r.drawLabel(4, 30, `F-3 鄰居資訊 (3/3)  共 ${peers.length}`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 

@@ -37,7 +37,7 @@ export class PairingScreen extends BaseScreen {
     r.drawStatusBar(defaultStatusOpts(this.serial));
 
     // Header
-    r.drawLabel(4, 24, 'T-7 配對碼  本機公鑰', {
+    r.drawLabel(4, 30, 'T-7 配對碼  本機公鑰', {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
