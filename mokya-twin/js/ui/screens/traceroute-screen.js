@@ -13,6 +13,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 import { NODES }     from './nodes-data.js';
 
 const HEADER_H = 16;
@@ -74,10 +75,7 @@ export class TracerouteScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     const peers = this._peers();
     this._clampScroll(peers.length);
@@ -90,7 +88,7 @@ export class TracerouteScreen extends BaseScreen {
     } else {
       header = `T-1 Traceroute  (${peers.length} peer)`;
     }
-    r.drawLabel(4, 30, header, {
+    r.drawLabel(4, 24, header, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 

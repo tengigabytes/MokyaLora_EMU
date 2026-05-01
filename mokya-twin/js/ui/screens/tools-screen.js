@@ -8,9 +8,10 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 const ROW_H = 18;
-const HEADER_Y = 30;
+const HEADER_Y = 24;
 
 // 順序與韌體 tools_view.c s_entries[] 相同。
 // EMU 沒有 RF debug overlay / Font test 對應，標記為 placeholder。
@@ -43,14 +44,10 @@ export class ToolsScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75,
-      rssi:    -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
-    // Header row
-    r.drawLabel(6, HEADER_Y, 'Tools / Diagnostics', {
+    // Header row(對齊韌體 panel y=0..15 帶 = 螢幕 y=16..31)
+    r.drawLabel(6, 28, 'Tools / Diagnostics', {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
@@ -70,9 +67,11 @@ export class ToolsScreen extends BaseScreen {
       });
     }
 
-    r.drawLabel(r.W / 2, 235, '▲▼ 選擇 · OK 進入 · BACK 返回', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
-    });
+    r.drawHintBar([
+      { key: '▲▼',   label: '選擇' },
+      { key: 'OK',   label: '進入' },
+      { key: 'BACK', label: '返回' },
+    ]);
   }
 
   handleKeyTap({ key }) {

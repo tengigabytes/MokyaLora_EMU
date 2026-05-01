@@ -9,6 +9,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 export class ChannelShareScreen extends BaseScreen {
   constructor(renderer, mie, serial) {
@@ -59,12 +60,9 @@ export class ChannelShareScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
-    r.drawLabel(4, 30, `B-4 分享 ch${this._channel.idx}  ${this._channel.name}`, {
+    r.drawLabel(4, 24, `B-4 分享 ch${this._channel.idx}  ${this._channel.name}`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
@@ -96,9 +94,9 @@ export class ChannelShareScreen extends BaseScreen {
     r.drawLabel(r.W / 2, 215, `URL ${this._url.length} chars  QR OK  BACK`, {
       font: r.F.XS, color: r.C.TEXT_DIM, align: 'center',
     });
-    r.drawLabel(r.W / 2, 235, 'BACK 編輯', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
-    });
+    r.drawHintBar([
+      { key: 'BACK', label: '編輯' }
+    ]);
   }
 
   handleKeyTap({ key }) {

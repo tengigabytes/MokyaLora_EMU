@@ -9,6 +9,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 // Mock 32-byte public key (deterministic across reloads).
 const MOCK_PK = new Uint8Array([
@@ -33,14 +34,10 @@ export class PairingScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75,
-      rssi:    -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     // Header
-    r.drawLabel(4, 30, 'T-7 配對碼  本機公鑰', {
+    r.drawLabel(4, 24, 'T-7 配對碼  本機公鑰', {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
@@ -69,9 +66,9 @@ export class PairingScreen extends BaseScreen {
       font: r.F.MONO_MD ?? r.F.ZH_SM, color: r.C.TEXT,
     });
 
-    r.drawLabel(4, 218, 'BACK 工具   admin_chan=off', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM,
-    });
+    r.drawHintBar([
+      { key: 'BACK', label: '工具   admin_chan=off' }
+    ]);
   }
 
   handleKeyTap({ key }) {

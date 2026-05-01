@@ -11,6 +11,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 export class MsgDetailScreen extends BaseScreen {
   constructor(renderer, mie, serial) {
@@ -24,20 +25,17 @@ export class MsgDetailScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     const m = this._msg;
     if (!m) {
-      r.drawLabel(4, 30, 'DM detail', { font: r.F.ZH_SM, color: r.C.FOCUS });
+      r.drawLabel(4, 24, 'DM detail', { font: r.F.ZH_SM, color: r.C.FOCUS });
       r.drawLabel(4, 60, '(no message)', { font: r.F.ZH_SM, color: r.C.TEXT_DIM });
       r.drawLabel(4, 90, 'BACK to return.', { font: r.F.ZH_SM, color: r.C.TEXT_DIM });
       return;
     }
 
-    r.drawLabel(4, 30, `DM detail / ${m.peerId ?? '!?'}`, {
+    r.drawLabel(4, 24, `DM detail / ${m.peerId ?? '!?'}`, {
       font: r.F.ZH_SM, color: r.C.FOCUS,
     });
 
@@ -73,9 +71,9 @@ export class MsgDetailScreen extends BaseScreen {
         y += 18;
       }
     }
-    r.drawLabel(r.W / 2, 235, 'BACK 關閉', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
-    });
+    r.drawHintBar([
+      { key: 'BACK', label: '關閉' }
+    ]);
   }
 
   _wrap(line, w) {

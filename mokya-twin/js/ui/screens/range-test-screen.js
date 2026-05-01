@@ -13,6 +13,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 import { NODES }     from './nodes-data.js';
 
 const ROW_H = 24;
@@ -42,13 +43,10 @@ export class RangeTestScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     // Title
-    r.drawLabel(4, 30, `T-2 Range Test  total=${this._totalHits}  mod:OFF`, {
+    r.drawLabel(4, 24, `T-2 Range Test  total=${this._totalHits}  mod:OFF`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
@@ -71,9 +69,9 @@ export class RangeTestScreen extends BaseScreen {
     }
 
     // Hint at bottom
-    r.drawLabel(4, 218, 'BACK 工具    (S-7.3 設定模組開關 + 間隔)', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM,
-    });
+    r.drawHintBar([
+      { key: 'BACK', label: '工具    (S-7.3 設定模組開關 + 間隔)' }
+    ]);
   }
 
   handleKeyTap({ key }) {

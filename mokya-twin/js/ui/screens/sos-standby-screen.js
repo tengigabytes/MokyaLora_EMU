@@ -7,6 +7,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 export class SosStandbyScreen extends BaseScreen {
   constructor(renderer, mie, serial) {
@@ -19,12 +20,9 @@ export class SosStandbyScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
-    r.drawLabel(4, 30, 'Z-1 SOS 待機', {
+    r.drawLabel(4, 24, 'Z-1 SOS 待機', {
       font: r.F.ZH_SM, color: r.C.WARNING,
     });
 
@@ -57,9 +55,11 @@ export class SosStandbyScreen extends BaseScreen {
       });
     }
 
-    r.drawLabel(r.W / 2, 235, 'OK 預覽 · SET 至 Z-3 設定 · BACK 返回', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
-    });
+    r.drawHintBar([
+      { key: 'OK', label: '預覽' },
+      { key: 'SET', label: '至 Z-3 設定' },
+      { key: 'BACK', label: '返回' }
+    ]);
   }
 
   handleKeyTap({ key }) {

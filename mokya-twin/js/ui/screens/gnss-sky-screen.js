@@ -13,6 +13,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 const CX = 160, CY = 100;
 const R_OUT = 70;
@@ -45,13 +46,10 @@ export class GnssSkyScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     const view = this._sats.length;
-    r.drawLabel(4, 30, `T-6 GNSS Sky  view=${view}`, {
+    r.drawLabel(4, 24, `T-6 GNSS Sky  view=${view}`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
@@ -106,9 +104,9 @@ export class GnssSkyScreen extends BaseScreen {
     r.drawLabel(4, 208, `C/N0  >=40:${cn40}  30-39:${cn30}  <30:${cnLo}  none:${cn0}`, {
       font: r.F.MONO_MD ?? r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
-    r.drawLabel(4, 228, 'BACK 工具', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM,
-    });
+    r.drawHintBar([
+      { key: 'BACK', label: '工具' }
+    ]);
   }
 
   handleKeyTap({ key }) {

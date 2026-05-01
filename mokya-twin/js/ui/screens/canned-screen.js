@@ -11,6 +11,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 const CANNED = [
   'OK',
@@ -47,15 +48,12 @@ export class CannedScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     const header = this._target?.short_name
       ? `Send to ${this._target.short_name}`
       : 'Quick send  (no peer)';
-    r.drawLabel(4, 30, header, {
+    r.drawLabel(4, 24, header, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
@@ -74,9 +72,10 @@ export class CannedScreen extends BaseScreen {
       });
     }
 
-    r.drawLabel(r.W / 2, 235, 'OK 送出 · BACK 取消', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
-    });
+    r.drawHintBar([
+      { key: 'OK', label: '送出' },
+      { key: 'BACK', label: '取消' }
+    ]);
   }
 
   handleKeyTap({ key }) {

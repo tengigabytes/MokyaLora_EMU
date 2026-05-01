@@ -14,8 +14,9 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
-const HEADER_Y = 30;
+const HEADER_Y = 24;
 const ROW_TOP = 50;
 const ROW_H = 24;
 const VISIBLE_ROWS = 7;
@@ -68,10 +69,7 @@ export class SnifferScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     r.drawLabel(4, HEADER_Y, `T-4 嗅探  ${this._ring.length}/16  total=${this._total}`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
@@ -104,9 +102,10 @@ export class SnifferScreen extends BaseScreen {
       font: r.F.MONO_MD ?? r.F.ZH_SM, color: r.C.TEXT,
     });
 
-    r.drawLabel(4, 218, 'UP/DN 翻包  BACK 工具', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM,
-    });
+    r.drawHintBar([
+      { key: 'UP', label: '' },
+      { key: 'DN', label: '翻包  BACK 工具' }
+    ]);
   }
 
   handleKeyTap({ key }) {

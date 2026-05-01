@@ -9,6 +9,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 import { NODES }     from './nodes-data.js';
 
 const HEADER_H = 16;
@@ -34,10 +35,7 @@ export class SpectrumScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     // Filter peers with valid snr; sort by snr desc.
     const peers = NODES
@@ -51,7 +49,7 @@ export class SpectrumScreen extends BaseScreen {
       .sort((a, b) => b.snr - a.snr);
 
     // Header
-    r.drawLabel(4, 30, `T-3 訊號頻譜  ${peers.length} peers (SNR known)`, {
+    r.drawLabel(4, 24, `T-3 訊號頻譜  ${peers.length} peers (SNR known)`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
@@ -77,9 +75,9 @@ export class SpectrumScreen extends BaseScreen {
       }
     }
 
-    r.drawLabel(4, 235, 'BACK 工具', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM,
-    });
+    r.drawHintBar([
+      { key: 'BACK', label: '工具' }
+    ]);
   }
 
   _mockAge(n) {

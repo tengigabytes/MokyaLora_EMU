@@ -19,6 +19,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 // 對齊 firmware/core1/src/ui/launcher_view.c s_tiles[]。
 // 第 9 格 Power 是唯一 placeholder,OK 顯示 toast 不導航。
@@ -57,11 +58,7 @@ export class MenuScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75,
-      rssi:    -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     r.drawLabel(r.W / 2, 32, '選單', {
       font: r.F.ZH_MD, color: r.C.TEXT, align: 'center',
@@ -80,9 +77,10 @@ export class MenuScreen extends BaseScreen {
       this._toast = null;
     }
 
-    r.drawLabel(r.W / 2, 235, 'OK 進入 · BACK 返回', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
-    });
+    r.drawHintBar([
+      { key: 'OK',   label: '進入' },
+      { key: 'BACK', label: '返回' },
+    ]);
   }
 
   handleKeyTap({ key }) {

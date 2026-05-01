@@ -16,6 +16,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 import { NODES }     from './nodes-data.js';
 
 const ROW_H = 20;
@@ -26,16 +27,13 @@ export class MyNodeScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     const myId = this.serial?.myNodeId ?? '!a3c8e211';
     const my = NODES.find(n => n.user?.id === myId)
               ?? { user: { short_name: 'EMU', long_name: 'MokyaLora EMU', role: 'CLIENT', hw_model: 'MOKYA_LORA' } };
     const sn = my.user.short_name ?? 'Me';
-    r.drawLabel(4, 30, `${sn} ${myId}`, {
+    r.drawLabel(4, 24, `${sn} ${myId}`, {
       font: r.F.ZH_SM, color: r.C.FOCUS,
     });
 
@@ -56,9 +54,10 @@ export class MyNodeScreen extends BaseScreen {
       });
     }
 
-    r.drawLabel(r.W / 2, 235, '(編輯請至設定) · BACK 返回', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
-    });
+    r.drawHintBar([
+      { key: '(編輯請至設定)', label: '' },
+      { key: 'BACK', label: '返回' }
+    ]);
   }
 
   handleKeyTap({ key }) {

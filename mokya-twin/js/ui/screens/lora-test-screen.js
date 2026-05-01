@@ -14,6 +14,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 const ROW_H = 24;
 const ROW_TOP = 50;
@@ -45,12 +46,9 @@ export class LoraTestScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
-    r.drawLabel(4, 30, 'T-5 LoRa 自我測試  (passive metrics)', {
+    r.drawLabel(4, 24, 'T-5 LoRa 自我測試  (passive metrics)', {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
@@ -71,9 +69,9 @@ export class LoraTestScreen extends BaseScreen {
       });
     }
 
-    r.drawLabel(4, 218, 'BACK 工具   (active loopback v2)', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM,
-    });
+    r.drawHintBar([
+      { key: 'BACK', label: '工具   (active loopback v2)' }
+    ]);
   }
 
   handleKeyTap({ key }) {

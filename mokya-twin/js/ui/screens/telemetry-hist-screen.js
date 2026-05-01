@@ -18,6 +18,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 const POINTS = 96;   // 96 點 × 30s = 48 min 視窗(壓縮 EMU 視覺密度)
 const TICK_MS = 1000;
@@ -72,14 +73,10 @@ export class TelemetryHistScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75,
-      rssi:    -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     // Title bar (16px) — matches firmware TITLE_H
-    r.drawLabel(r.W / 2, 30, 'F-4 歷史曲線 · 48 min', {
+    r.drawLabel(r.W / 2, 24, 'F-4 歷史曲線 · 48 min', {
       font: r.F.ZH_MD, color: r.C.TEXT, align: 'center',
     });
 
@@ -116,9 +113,10 @@ export class TelemetryHistScreen extends BaseScreen {
       minVal: 0, maxVal: 25,
     });
 
-    r.drawLabel(r.W / 2, 235, '◀ ▶ 翻頁 · BACK 返回', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
-    });
+    r.drawHintBar([
+      { key: '◀▶', label: '翻頁' },
+      { key: 'BACK', label: '返回' }
+    ]);
   }
 
   _chart(x, y, w, h, data, opts) {

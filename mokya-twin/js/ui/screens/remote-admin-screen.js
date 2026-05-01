@@ -12,6 +12,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 const ACTIONS = [
   { label: 'Reboot 5s',           warn: '節點將在 5 秒後重啟' },
@@ -48,13 +49,10 @@ export class RemoteAdminScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     const target = this._node?.user?.short_name ?? '(no target)';
-    r.drawLabel(4, 30, `C-3 Remote Admin -> ${target}`, {
+    r.drawLabel(4, 24, `C-3 Remote Admin -> ${target}`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 

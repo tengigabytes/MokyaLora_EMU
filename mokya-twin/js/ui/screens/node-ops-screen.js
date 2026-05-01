@@ -11,6 +11,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 const ROW_H = 24;
 const ROW_TOP = 50;
@@ -32,10 +33,7 @@ export class NodeOpsScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     const n = this._node;
     let header;
@@ -47,7 +45,7 @@ export class NodeOpsScreen extends BaseScreen {
       const nm = n.user?.short_name ?? '?';
       header = `Ops: ${nm} ${n.user?.id ?? '!?'}`;
     }
-    r.drawLabel(4, 30, header, {
+    r.drawLabel(4, 24, header, {
       font: r.F.ZH_SM,
       color: this._feedback ? r.C.GREEN : r.C.FOCUS,
     });
@@ -62,9 +60,10 @@ export class NodeOpsScreen extends BaseScreen {
       });
     }
 
-    r.drawLabel(r.W / 2, 235, 'OK 執行 · BACK 詳情', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
-    });
+    r.drawHintBar([
+      { key: 'OK', label: '執行' },
+      { key: 'BACK', label: '詳情' }
+    ]);
   }
 
   _buildOps() {

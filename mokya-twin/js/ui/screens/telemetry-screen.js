@@ -10,6 +10,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 import { NODES } from './nodes-data.js';
 
 const ROW_H = 24;
@@ -31,23 +32,21 @@ export class TelemetryScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     if (this._page === 1) this._renderF1();
     else if (this._page === 2) this._renderF2();
     else this._renderF3();
 
-    r.drawLabel(r.W / 2, 235, '◀ ▶ 翻頁 · BACK 返回', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
-    });
+    r.drawHintBar([
+      { key: '◀▶', label: '翻頁' },
+      { key: 'BACK', label: '返回' }
+    ]);
   }
 
   _renderF1() {
     const r = this.r;
-    r.drawLabel(4, 30, 'F-1 本機遙測 (1/3)', {
+    r.drawLabel(4, 24, 'F-1 本機遙測 (1/3)', {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
     const rows = [
@@ -70,7 +69,7 @@ export class TelemetryScreen extends BaseScreen {
 
   _renderF2() {
     const r = this.r;
-    r.drawLabel(4, 30, 'F-2 環境感測 (2/3)', {
+    r.drawLabel(4, 24, 'F-2 環境感測 (2/3)', {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
     const rows = [
@@ -94,7 +93,7 @@ export class TelemetryScreen extends BaseScreen {
   _renderF3() {
     const r = this.r;
     const peers = NODES.filter(n => n.user?.id !== this.serial?.myNodeId);
-    r.drawLabel(4, 30, `F-3 鄰居資訊 (3/3)  共 ${peers.length}`, {
+    r.drawLabel(4, 24, `F-3 鄰居資訊 (3/3)  共 ${peers.length}`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 

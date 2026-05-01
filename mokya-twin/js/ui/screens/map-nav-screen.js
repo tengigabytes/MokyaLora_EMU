@@ -9,6 +9,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 const CARDINALS = [
   { name: 'N',  min: 337.5, max: 22.5  },
@@ -56,10 +57,7 @@ export class MapNavScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     const t = this._target;
     let header;
@@ -68,7 +66,7 @@ export class MapNavScreen extends BaseScreen {
     } else {
       header = `D-6 -> ${t.user?.short_name ?? '?'} ${t.user?.id ?? '!?'}`;
     }
-    r.drawLabel(4, 30, header, {
+    r.drawLabel(4, 24, header, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
@@ -79,9 +77,9 @@ export class MapNavScreen extends BaseScreen {
       r.drawLabel(4, 140, 'Lock a peer in D-1 first', {
         font: r.F.ZH_SM, color: r.C.TEXT,
       });
-      r.drawLabel(4, 235, 'BACK 地圖', {
-        font: r.F.ZH_SM, color: r.C.TEXT_DIM,
-      });
+      r.drawHintBar([
+      { key: 'BACK', label: '地圖' }
+    ]);
       return;
     }
 
@@ -89,7 +87,7 @@ export class MapNavScreen extends BaseScreen {
       r.drawLabel(r.W / 2, 90, 'GPS searching', {
         font: r.F.ZH_LG, color: r.C.WARNING, align: 'center',
       });
-      r.drawLabel(4, 235, 'BACK 地圖', { font: r.F.ZH_SM, color: r.C.TEXT_DIM });
+      r.drawHintBar([{ key: 'BACK', label: '地圖' }]);
       return;
     }
 
@@ -130,9 +128,9 @@ export class MapNavScreen extends BaseScreen {
       font: r.F.MONO_MD ?? r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
-    r.drawLabel(4, 235, 'BACK 地圖', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM,
-    });
+    r.drawHintBar([
+      { key: 'BACK', label: '地圖' }
+    ]);
   }
 
   handleKeyTap({ key }) {

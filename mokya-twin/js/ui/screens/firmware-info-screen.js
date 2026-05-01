@@ -9,9 +9,10 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 const ROW_H = 20;
-const HEADER_Y = 30;
+const HEADER_Y = 24;
 const ROW_TOP = 50;
 
 export class FirmwareInfoScreen extends BaseScreen {
@@ -19,11 +20,7 @@ export class FirmwareInfoScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75,
-      rssi:    -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
     r.drawLabel(4, HEADER_Y, 'T-8 韌體資訊', {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,

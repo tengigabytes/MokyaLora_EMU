@@ -10,6 +10,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 const ROW_H = 24;
 const ROW_TOP = 50;
@@ -43,12 +44,9 @@ export class ChannelAddScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
-    r.drawLabel(4, 30, `B-3 加入頻道  slot=${this._slot}`, {
+    r.drawLabel(4, 24, `B-3 加入頻道  slot=${this._slot}`, {
       font: r.F.ZH_SM, color: r.C.TEXT_DIM,
     });
 
@@ -79,9 +77,13 @@ export class ChannelAddScreen extends BaseScreen {
       });
     }
 
-    r.drawLabel(r.W / 2, 235, 'UP/DN 移動 · OK 進入/送出 · BACK 返回', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
-    });
+    r.drawHintBar([
+      { key: 'UP', label: '' },
+      { key: 'DN', label: '移動' },
+      { key: 'OK', label: '進入' },
+      { key: '送出', label: '' },
+      { key: 'BACK', label: '返回' }
+    ]);
   }
 
   handleKeyTap({ key }) {

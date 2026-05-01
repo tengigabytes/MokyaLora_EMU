@@ -7,6 +7,7 @@
  */
 
 import { BaseScreen } from '../screen-manager.js';
+import { defaultStatusOpts } from './_chrome.js';
 
 const ROW_H = 26;
 const ROW_TOP = 50;
@@ -28,12 +29,9 @@ export class SosConfigScreen extends BaseScreen {
     const r = this.r;
     r.clear();
 
-    r.drawStatusBar({
-      time:    new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-      battery: 75, rssi: -82,
-    });
+    r.drawStatusBar(defaultStatusOpts(this.serial));
 
-    r.drawLabel(4, 30, 'Z-3 SOS 設定', {
+    r.drawLabel(4, 24, 'Z-3 SOS 設定', {
       font: r.F.ZH_SM, color: r.C.WARNING,
     });
 
@@ -56,9 +54,10 @@ export class SosConfigScreen extends BaseScreen {
       });
     }
 
-    r.drawLabel(r.W / 2, 235, '◀ ▶ 改值 · BACK 返回', {
-      font: r.F.ZH_SM, color: r.C.TEXT_DIM, align: 'center',
-    });
+    r.drawHintBar([
+      { key: '◀▶', label: '改值' },
+      { key: 'BACK', label: '返回' }
+    ]);
   }
 
   handleKeyTap({ key }) {
